@@ -24,11 +24,10 @@ This specification defines the integration of eODS (Enshrined Operator-Delegator
 
 ## Custom types
 
-| Name                     | SSZ equivalent | Description                              |
-|--------------------------| - |------------------------------------------|
-| `DelegatorIndex`         | `uint64` | a delegator registry index               |
-| `Delegator_fee_quotient` | `uint64` | a delegator fee quotient                 |
-| `Delegator_Quota`        | `uint64` | a delegator quota in a validator balance |
+| Name             | SSZ equivalent | Description |
+|------------------| - |---------|
+| `DelegatorIndex` | `uint64` | a delegator registry index | 
+| `Quota` | `uint64` | a quota |
 
 ## Preset
 
@@ -66,8 +65,8 @@ class Delegator(Container):
 class DelegatedValidator(Container):
     delegated_validator: Validator
     delegated_validator_initial_balance: Gwei
-    delegated_validator_quota: Delegator_Quota
-    delegators_quotas: List[Delegator_Quota]
+    delegated_validator_quota: uint64
+    delegators_quotas: List[Quota]
     delegated_balances: List[Gwei]
     total_delegated_balance: Gwei
 ```
@@ -87,7 +86,7 @@ class Validator(Container):
     exit_epoch: Epoch
     withdrawable_epoch: Epoch
     delegated: boolean
-    fee_percentage: Delegator_fee_quotient
+    fee_quotient: uint64
 ```
 
 #### `BeaconState`

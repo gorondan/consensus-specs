@@ -45,7 +45,7 @@ def withdraw_from_validator(state: BeaconState, delegator_index: DelegatorIndex,
     delegator_quota = principal / total_delegated
     payout = validator_balance * delegator_quota
 
-    fee = payout * delegated_validator.delegated_validator.fee_percentage // 1_000_000
+    fee = payout * delegated_validator.delegated_validator.fee_quotient // 1_000_000
     net_amount = payout - fee
 
     state.delegators_balances[delegator_index] += net_amount
@@ -68,7 +68,7 @@ def compute_pending_rewards(state: BeaconState, delegator_index: DelegatorIndex,
 
     delegator_quota = principal / total_delegated
     reward = validator_balance * delegator_quota
-    fee = reward * delegated_validator.delegated_validator.fee_percentage // 1_000_000
+    fee = reward * delegated_validator.delegated_validator.fee_quotient // 1_000_000
 
     return reward - fee
 ```
