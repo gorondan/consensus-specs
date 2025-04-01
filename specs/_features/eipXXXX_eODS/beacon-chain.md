@@ -48,6 +48,8 @@ This specification defines the integration of eODS (Enshrined Operator-Delegator
 
 ### New containers
 
+#### `Delegator`
+
 ```python
 class Delegator(Container):
     pubkey: BLSPubkey
@@ -55,6 +57,8 @@ class Delegator(Container):
     effective_delegated_balance: Gwei
     delegation_entry_epoch: Epoch
 ```
+
+#### `DelegatedValidator`
 
 ```python
 class DelegatedValidator(Container):
@@ -68,6 +72,8 @@ class DelegatedValidator(Container):
 
 ### Modified containers
 
+#### `Validator`
+
 ```python
 class Validator(Container):
     pubkey: BLSPubkey
@@ -78,9 +84,11 @@ class Validator(Container):
     activation_epoch: Epoch
     exit_epoch: Epoch
     withdrawable_epoch: Epoch
-    delegated: bool
+    delegated: boolean
     fee_percentage: Fee
 ```
+
+#### `BeaconState`
 
 ```python
 class BeaconState(Container):

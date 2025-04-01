@@ -9,6 +9,7 @@ from .eip6800 import EIP6800SpecBuilder
 from .eip7441 import EIP7441SpecBuilder
 from .eip7732 import EIP7732SpecBuilder
 from .eip7805 import EIP7805SpecBuilder
+from .eipXXXX_eODS import EIPXXXX_eODSSpecBuilder
 
 
 spec_builders = {
@@ -16,6 +17,6 @@ spec_builders = {
     for builder in (
         Phase0SpecBuilder, AltairSpecBuilder, BellatrixSpecBuilder, CapellaSpecBuilder, DenebSpecBuilder,
         ElectraSpecBuilder, FuluSpecBuilder, EIP6800SpecBuilder, EIP7441SpecBuilder, EIP7732SpecBuilder,
-        EIP7805SpecBuilder,
+        EIP7805SpecBuilder, EIPXXXX_eODSSpecBuilder
     )
 }

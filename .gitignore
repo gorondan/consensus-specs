@@ -53,3 +53,5 @@ site
 
 # docker test results
 testResults
+.idea
+.DS_Store
