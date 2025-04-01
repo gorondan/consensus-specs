@@ -1,6 +1,10 @@
-# eODS Accounting Logic
+# EIP-XXX_eODS -- Beacon Chain Accounting
 
-This file defines the core delegation lifecycle and accounting-related operations for Vanilla eODS.
+## Introduction
+
+*Note:* This specification is built upon [Electra](../../electra/beacon_chain.md) and is under active development.  
+This file defines the core delegation lifecycle and accounting-related operations for eODS, e.g. delegation of balances, 
+withdrawal processing, and reward preview computation in the Beacon Chain.
 
 ## Delegation Lifecycle Functions
 
@@ -12,6 +16,7 @@ def deposit_to_delegate(state: BeaconState, pubkey: BLSPubkey, withdrawal_creden
     assert validator_index < len(state.delegated_validators)
 
     delegated_validator = state.delegated_validators[validator_index]
+    validator_balance = state.balances[validator_index]
 
     delegator_index = get_delegator_index(state, pubkey)
     if delegator_index is None:
@@ -25,8 +30,10 @@ def deposit_to_delegate(state: BeaconState, pubkey: BLSPubkey, withdrawal_creden
     delegator.delegation_entry_epoch = compute_epoch_at_slot(state.slot)
 
     delegated_validator.total_delegated_balance += amount
-    delegated_validator.delegators_quotas.append(amount)
     delegated_validator.delegated_balances.append(amount)
+
+    quota = Gwei(0) if validator_balance == 0 else amount / validator_balance
+    delegated_validator.delegators_quotas.append(quota)
 ```
 
 ### withdraw_from_validator
@@ -38,14 +45,12 @@ def withdraw_from_validator(state: BeaconState, delegator_index: DelegatorIndex,
 
     subindex = delegator_index  # parallel index assumption
     principal = delegated_validator.delegated_balances[subindex]
-
     validator_balance = state.balances[validator_index]
-    total_delegated = delegated_validator.total_delegated_balance
 
-    delegator_quota = principal / total_delegated
+    delegator_quota = Gwei(0) if validator_balance == 0 else delegated_validator.delegators_quotas[subindex]
     payout = validator_balance * delegator_quota
 
-    fee = payout * delegated_validator.delegated_validator.fee_quotient // 1_000_000
+    fee = payout * delegated_validator.delegated_validator.fee_percentage // 1_000_000
     net_amount = payout - fee
 
     state.delegators_balances[delegator_index] += net_amount
@@ -59,16 +64,12 @@ def withdraw_from_validator(state: BeaconState, delegator_index: DelegatorIndex,
 
 ```python
 def compute_pending_rewards(state: BeaconState, delegator_index: DelegatorIndex, validator_index: ValidatorIndex) -> Gwei:
-    delegator = state.delegators[delegator_index]
     delegated_validator = state.delegated_validators[validator_index]
-
-    principal = delegator.effective_delegated_balance
-    total_delegated = delegated_validator.total_delegated_balance
     validator_balance = state.balances[validator_index]
+    quota = delegated_validator.delegators_quotas[delegator_index] if validator_balance > 0 else Gwei(0)
 
-    delegator_quota = principal / total_delegated
-    reward = validator_balance * delegator_quota
-    fee = reward * delegated_validator.delegated_validator.fee_quotient // 1_000_000
+    reward = validator_balance * quota
+    fee = reward * delegated_validator.delegated_validator.fee_percentage // 1_000_000
 
     return reward - fee
 ```
@@ -85,7 +86,7 @@ def withdraw_to_wallet(state: BeaconState, delegator_index: DelegatorIndex) -> W
 
     return Withdrawal(
         index=state.next_withdrawal_index,
-        validator_index=delegator_index,  # or another mechanism
+        validator_index=ValidatorIndex(0),  # Placeholder: delegator withdrawal context
         address=delegator.withdrawal_credentials,
         amount=amount,
     )
