@@ -24,18 +24,15 @@ This specification defines the integration of eODS (Enshrined Operator-Delegator
 
 ## Custom types
 
-| Name | SSZ equivalent | Description |
-| - | - | - |
-| `DelegatorIndex` | `uint64` | a delegator registry index |
+| Name | SSZ equivalent | Description                              |
+| - | - |------------------------------------------|
+| `DelegatorIndex` | `uint64` | a delegator registry index               |
+| `DELEGATOR_FEE_QUOTIENT` | `uint64` | a delegator fee quotient                 |
+| `DELEGATOR_QUOTA`        | `uint64` | a delegator quota in a validator balance |
 
 ## Preset
 
 ### Misc
-
-| Name                      | Value |
-|---------------------------| - |
-| `DELEGDATOR_FEE_QUOTIENT` | `uint64(4)` |
-| `DELEGDATOR_QUOTA`        | `uint64(4)` |
 
 ### Domain types
 
