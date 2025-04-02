@@ -122,10 +122,4 @@ def register_new_delegator(state: BeaconState, pubkey: BLSPubkey, withdrawal_cre
     state.delegators.append(delegator)
     state.delegators_balances.append(Gwei(0))
     return DelegatorIndex(len(state.delegators) - 1)
-
- -> None:
-    delegated_validator = state.delegated_validators[validator_index]
-    delegated_validator.delegators_quotas.append(quota)
-    delegated_validator.delegated_balances.append(amount)
-    delegated_validator.total_delegated_balance += amount
 ```
