@@ -3,15 +3,24 @@
 ## Introduction
 
 *Note:* This specification is built upon [Electra](../../electra/beacon_chain.md) and is under active development.  
-This file defines the core delegation lifecycle and accounting-related operations for eODS, e.g. delegation of balances, 
-withdrawal processing, and reward preview computation in the Beacon Chain.
+This specification defines the accounting logic for eODS (Enshrined Operator-Delegator Separation), responsible for enshrined delegation balances, withdrawal processing, and reward preview computation in the Beacon Chain.
 
 ## Delegation Lifecycle Functions
 
-### deposit_to_delegate
+### deposit_to_delegator_balance
 
 ```python
-def deposit_to_delegate(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, validator_index: ValidatorIndex, amount: Gwei) -> None:
+def deposit_to_delegator_balance(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: Gwei) -> None:
+    delegator_index = get_delegator_index(state, pubkey)
+    if delegator_index is None:
+        delegator_index = register_new_delegator(state, pubkey, withdrawal_credentials)
+    state.delegators_balances[delegator_index] += amount
+```
+
+### delegate_to_validator
+
+```python
+def delegate_to_validator(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, validator_index: ValidatorIndex, amount: Gwei) -> None:
     assert amount > 0
     assert validator_index < len(state.delegated_validators)
 
@@ -23,7 +32,7 @@ def deposit_to_delegate(state: BeaconState, pubkey: BLSPubkey, withdrawal_creden
         delegator_index = register_new_delegator(state, pubkey, withdrawal_credentials)
 
     assert state.delegators_balances[delegator_index] >= amount
-    state.delegators_balances[delegator_index] -= amount
+    # balance deduction is already handled in deposit_to_delegator_balance
 
     delegator = state.delegators[delegator_index]
     delegator.effective_delegated_balance += amount
@@ -114,13 +123,7 @@ def register_new_delegator(state: BeaconState, pubkey: BLSPubkey, withdrawal_cre
     state.delegators_balances.append(Gwei(0))
     return DelegatorIndex(len(state.delegators) - 1)
 
-def add_delegator(
-    state: BeaconState,
-    delegator_index: DelegatorIndex,
-    validator_index: ValidatorIndex,
-    quota: Quota,
-    amount: Gwei,
-) -> None:
+ -> None:
     delegated_validator = state.delegated_validators[validator_index]
     delegated_validator.delegators_quotas.append(quota)
     delegated_validator.delegated_balances.append(amount)
