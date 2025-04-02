@@ -1,7 +1,6 @@
 # Delegator Extensions for Enhanced eODS
 
-This file defines advanced delegator logic used in Enhanced eODS, such as dynamic re-delegation and liquidity-driven 
-priority exits.
+This file defines advanced delegator logic used in Enhanced eODS, such as dynamic re-delegation and liquidity-driven priority exits.
 
 ## Advanced Delegation Lifecycle
 
@@ -58,7 +57,7 @@ def priority_exit(
     state: BeaconState,
     delegator_index: DelegatorIndex,
     validator_index: ValidatorIndex,
-    fee: Gwei
+    priority_exit_fee: Gwei
 ) -> Withdrawal:
     """
     Allows a validator to receive early liquidity by borrowing undelegated balance from a delegator.
@@ -68,17 +67,17 @@ def priority_exit(
     - Delegator has sufficient undelegated balance.
     - Validator is registered and has a pending exit or reduced liquidity.
     """
-    assert state.delegators_balances[delegator_index] >= fee
+    assert state.delegators_balances[delegator_index] >= priority_exit_fee
 
     delegator = state.delegators[delegator_index]
-    state.delegators_balances[delegator_index] -= fee
+    state.delegators_balances[delegator_index] -= priority_exit_fee
 
     validator = state.validators[validator_index]
     return Withdrawal(
         index=state.next_withdrawal_index,
         validator_index=validator_index,
         address=validator.withdrawal_credentials,
-        amount=fee,
+        amount=priority_exit_fee,
     )
 ```
 
