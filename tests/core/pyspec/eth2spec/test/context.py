@@ -15,6 +15,7 @@ from .helpers.constants import (
     POST_FORK_OF,
     ALLOWED_TEST_RUNNER_FORKS,
     LIGHT_CLIENT_TESTING_FORKS,
+    EIPXXXX_EODS
 )
 from .helpers.forks import is_post_fork, is_post_electra
 from .helpers.genesis import create_genesis_state
@@ -587,6 +588,7 @@ with_deneb_and_later = with_all_phases_from(DENEB)
 with_electra_and_later = with_all_phases_from(ELECTRA)
 with_fulu_and_later = with_all_phases_from(FULU, all_phases=ALLOWED_TEST_RUNNER_FORKS)
 with_eip7441_and_later = with_all_phases_from(EIP7441, all_phases=ALLOWED_TEST_RUNNER_FORKS)
+with_eipxxxx_eods_and_later = with_all_phases_from(EIPXXXX_EODS, all_phases=ALLOWED_TEST_RUNNER_FORKS)
 
 with_altair_until_eip7732 = with_all_phases_from_to(ALTAIR, EIP7732)
 with_bellatrix_until_eip7732 = with_all_phases_from_to(BELLATRIX, EIP7732)

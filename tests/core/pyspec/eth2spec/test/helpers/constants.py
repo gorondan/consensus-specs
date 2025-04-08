@@ -21,6 +21,7 @@ FULU = SpecForkName('fulu')
 EIP7441 = SpecForkName('eip7441')
 EIP7732 = SpecForkName('eip7732')
 EIP7805 = SpecForkName('eip7805')
+EIPXXXX_EODS = SpecForkName('eipxxxx_eods')
 
 #
 # SpecFork settings
@@ -39,13 +40,14 @@ ALL_PHASES = (
     FULU,
     # Experimental patches
     EIP7732,
+    EIPXXXX_EODS
 )
 # The forks that have light client specs
 LIGHT_CLIENT_TESTING_FORKS = (*[item for item in MAINNET_FORKS if item != PHASE0], ELECTRA)
 # The forks that output to the test vectors.
 TESTGEN_FORKS = (*MAINNET_FORKS, ELECTRA, FULU, EIP7441, EIP7732)
 # Forks allowed in the test runner `--fork` flag, to fail fast in case of typos
-ALLOWED_TEST_RUNNER_FORKS = (*ALL_PHASES, EIP7441)
+ALLOWED_TEST_RUNNER_FORKS = (*ALL_PHASES, EIP7441, EIPXXXX_EODS)
 
 # NOTE: the same definition as in `pysetup/md_doc_paths.py`
 PREVIOUS_FORK_OF = {
@@ -61,6 +63,7 @@ PREVIOUS_FORK_OF = {
     EIP7441: CAPELLA,
     EIP7732: ELECTRA,
     EIP7805: ELECTRA,
+    EIPXXXX_EODS: ELECTRA,
 }
 
 # For fork transition tests

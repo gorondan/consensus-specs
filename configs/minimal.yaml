@@ -61,6 +61,10 @@ EIP7441_FORK_EPOCH: 18446744073709551615
 EIP7732_FORK_VERSION: 0x09000001
 EIP7732_FORK_EPOCH: 18446744073709551615
 
+# EIPXXXX_EODS
+EIPXXXX_EODS_FORK_VERSION: 0x10000001  # temporary stub
+EIPXXXX_EODS_FORK_EPOCH: 18446744073709551615
+
 # Time parameters
 # ---------------------------------------------------------------
 # [customized] Faster for testing purposes
