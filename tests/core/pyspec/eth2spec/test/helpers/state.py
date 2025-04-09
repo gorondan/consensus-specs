@@ -7,6 +7,8 @@ from eth2spec.test.helpers.voluntary_exits import get_unslashed_exited_validator
 def get_balance(state, index):
     return state.balances[index]
 
+def get_delegator_balance(state, delegator_index):
+    return state.delegators_balances[delegator_index]
 
 def next_slot(spec, state):
     """

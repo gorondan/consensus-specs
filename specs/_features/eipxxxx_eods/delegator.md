@@ -1,6 +1,6 @@
 # Delegator Extensions for Enhanced eODS
 
-This file defines advanced delegator logic used in deposit and withdraw 
+This file defines basic delegator logic used in deposit and withdrawal
 and advanced delegator logic used in dynamic re-delegation and validator early-liquidity exits.
 
 ### delegate_to_validator

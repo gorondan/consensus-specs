@@ -1,15 +1,8 @@
-from eth2spec.test.context import spec_state_test, with_eip7441_and_later, expect_assertion_error, \
+from eth2spec.test.context import spec_state_test, expect_assertion_error, \
     with_eipxxxx_eods_and_later
-from eth2spec.test.helpers.eip7441 import (
-    compute_whisk_k_commitment,
-    compute_whisk_tracker,
-    set_opening_proof
-)
-
 
 def empty_block(spec):
     return spec.BeaconBlock()
-
 
 def run_process_whisk_opening_proof(spec, state, block, valid=True):
     yield 'pre', state

@@ -149,3 +149,29 @@ class BeaconState(Container):
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]
 ```
+
+## Beacon chain state transition function
+
+### Epoch processing
+
+#### New `apply_pending_deposit`
+
+```python
+def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
+    """
+    Applies ``deposit`` to the ``state``.
+    """
+    validator_pubkeys = [v.pubkey for v in state.validators]
+    if deposit.pubkey not in validator_pubkeys:
+        # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+        if is_valid_deposit_signature(
+            deposit.pubkey,
+            deposit.withdrawal_credentials,
+            deposit.amount,
+            deposit.signature
+        ):
+            add_validator_to_registry(state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount)
+    else:
+        validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
+        increase_balance(state, validator_index, deposit.amount)
+```
