@@ -7,11 +7,11 @@
 
 - [Introduction](#introduction)
 - [Preset](#preset)
-  - [Domain types](#domain-types)
-  - [State list lengths](#state-list-lengths)
+    - [Domain types](#domain-types)
+    - [State list lengths](#state-list-lengths)
 - [Containers](#containers)
-  - [New containers](#new-containers)
-  - [Modified containers](#modified-containers)
+    - [New containers](#new-containers)
+    - [Modified containers](#modified-containers)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -20,14 +20,16 @@
 ## Introduction
 
 *Note:* This specification is built upon [Electra](../../electra/beacon_chain.md) and is under active development.
-This specification defines the integration of eODS (Enshrined Operator-Delegator Separation) into Ethereum’s Beacon Chain. It introduces protocol-level delegation tracking, enshrined accounting logic, and a minimal delegation lifecycle without dynamic validator selection or delegator governance.
+This specification defines the integration of eODS (Enshrined Operator-Delegator Separation) into Ethereum’s Beacon
+Chain. It introduces protocol-level delegation tracking, enshrined accounting logic, and a minimal delegation lifecycle
+without dynamic validator selection or delegator governance.
 
 ## Custom types
 
-| Name             | SSZ equivalent | Description |
-|------------------| - |---------|
-| `DelegatorIndex` | `uint64` | a delegator registry index | 
-| `Quota` | `uint64` | a quota |
+| Name             | SSZ equivalent | Description                |
+|------------------|----------------|----------------------------|
+| `DelegatorIndex` | `uint64`       | a delegator registry index | 
+| `Quota`          | `uint64`       | a quota                    |
 
 ## Preset
 
@@ -35,7 +37,17 @@ This specification defines the integration of eODS (Enshrined Operator-Delegator
 
 ### Misc
 
+### Gwei values
+
+| Name                             | Value                                  |
+|----------------------------------|----------------------------------------|
+| `MIN_DEPOSIT_TO_DELEGATE_AMOUNT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000) |
+
 ### Domain types
+
+| Name                         | Value                      |
+|------------------------------|----------------------------|
+| `DOMAIN_DEPOSIT_TO_DELEGATE` | `DomainType('0x07000000')` |
 
 ### State list lengths
 
@@ -46,6 +58,27 @@ This specification defines the integration of eODS (Enshrined Operator-Delegator
 ---
 
 ## Containers
+
+### Misc dependencies
+
+#### `DepositToDelegateMessage`
+
+```python
+class DepositToDelegateMessage(Container):
+    pubkey: BLSPubkey
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+```
+
+#### `DepositToDelegateData`
+
+```python
+class DepositToDelegateData(Container):
+    pubkey: BLSPubkey
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    signature: BLSSignature  # Signing over DepositToDelegateMessage
+```
 
 ### New containers
 
@@ -165,13 +198,37 @@ def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
     if deposit.pubkey not in validator_pubkeys:
         # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
         if is_valid_deposit_signature(
-            deposit.pubkey,
-            deposit.withdrawal_credentials,
-            deposit.amount,
-            deposit.signature
+                deposit.pubkey,
+                deposit.withdrawal_credentials,
+                deposit.amount,
+                deposit.signature
         ):
             add_validator_to_registry(state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount)
     else:
         validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
         increase_balance(state, validator_index, deposit.amount)
+```
+
+### Epoch processing
+
+#### Operations
+
+##### Deposits
+
+###### New `is_valid_deposit_signature`
+
+```python
+def is_valid_deposit_to_delegate_signature(pubkey: BLSPubkey,
+                                           withdrawal_credentials: Bytes32,
+                                           amount: uint64,
+                                           signature: BLSSignature) -> bool:
+    deposit_to_delegate_message = DepositToDelegateMessage(
+        pubkey=pubkey,
+        withdrawal_credentials=withdrawal_credentials,
+        amount=amount,
+    )
+    domain = compute_domain(
+        DOMAIN_DEPOSIT_TO_DELEGATE)  # Fork-agnostic domain since delegation deposits are valid across forks
+    signing_root = compute_signing_root(deposit_to_delegate_message, domain)
+    return bls.Verify(pubkey, signing_root, signature)
 ```

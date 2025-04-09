@@ -1,21 +1,15 @@
-from random import Random
-
-from eth2spec.test.context import expect_assertion_error
 from eth2spec.test.helpers.forks import is_post_altair, is_post_electra
 from eth2spec.test.helpers.keys import pubkeys, privkeys
 from eth2spec.test.helpers.state import get_delegator_balance
-from eth2spec.test.helpers.epoch_processing import run_epoch_processing_to
-from eth2spec.utils import bls
-from eth2spec.utils.merkle_minimal import calc_merkle_tree_from_leaves, get_merkle_proof
-from eth2spec.utils.ssz.ssz_impl import hash_tree_root
-from eth2spec.utils.ssz.ssz_typing import List
+from eth2spec.utils.bls import bls
+
 
 def prepare_deposit_to_delegate_request(spec, delegator_index, amount,
                             index=None,
                             pubkey=None,
-                            # privkey=None,
-                            # withdrawal_credentials=None,
-                            # signed=False
+                            privkey=None,
+                            withdrawal_credentials=None,
+                            signed=False
                                         ):
     """
     Create a deposit to delegate request for the given delegator, depositing the given amount.
@@ -26,21 +20,45 @@ def prepare_deposit_to_delegate_request(spec, delegator_index, amount,
     if pubkey is None:
         pubkey = pubkeys[delegator_index]
 
-    # if privkey is None:
-    #     privkey = privkeys[delegator_index]
+    if privkey is None:
+        privkey = privkeys[delegator_index]
 
-    # # insecurely use pubkey as withdrawal key if no credentials provided
-    # if withdrawal_credentials is None:
-    #     withdrawal_credentials = spec.BLS_WITHDRAWAL_PREFIX + spec.hash(pubkey)[1:]
+    # insecurely use pubkey as withdrawal key if no credentials provided
+    if withdrawal_credentials is None:
+        withdrawal_credentials = spec.BLS_WITHDRAWAL_PREFIX + spec.hash(pubkey)[1:]
 
-    deposit_data = build_deposit_to_delegate_data(spec, pubkey, amount) #privkey, withdrawal_credentials, signed=signed
+    deposit_to_delegate_data = build_deposit_to_delegate_data(spec, pubkey, privkey, amount, withdrawal_credentials, signed=signed)
     return spec.DepositRequest(
-        pubkey=deposit_data.pubkey,
-        #withdrawal_credentials=deposit_data.withdrawal_credentials,
-        amount=deposit_data.amount,
-        #signature=deposit_data.signature,
+        pubkey=deposit_to_delegate_data.pubkey,
+        withdrawal_credentials=deposit_to_delegate_data.withdrawal_credentials,
+        amount=deposit_to_delegate_data.amount,
+        signature=deposit_to_delegate_data.signature,
         index=index
     )
+
+def build_deposit_to_delegate_data(spec, pubkey, privkey, amount, withdrawal_credentials, fork_version=None, signed=False):
+    deposit_to_delegate_data = spec.DepositToDelegateData(
+        pubkey=pubkey,
+        withdrawal_credentials=withdrawal_credentials,
+        amount=amount,
+    )
+    if signed:
+        sign_deposit_to_delegate_data(spec, deposit_to_delegate_data, privkey, fork_version)
+    return deposit_to_delegate_data
+
+def sign_deposit_to_delegate_data(spec, deposit_to_delegate_data, privkey, fork_version=None):
+    deposit_to_delegate_message = spec.DepositToDelegateMessage(
+        pubkey=deposit_to_delegate_data.pubkey,
+        withdrawal_credentials=deposit_to_delegate_data.withdrawal_credentials,
+        amount=deposit_to_delegate_data.amount)
+    if fork_version is not None:
+        domain = spec.compute_domain(domain_type=spec.DOMAIN_DEPOSIT_TO_DELEGATE, fork_version=fork_version)
+    else:
+        domain = spec.compute_domain(spec.DOMAIN_DEPOSIT_TO_DELEGATE)
+    signing_root = spec.compute_signing_root(deposit_to_delegate_message, domain)
+    deposit_to_delegate_data.signature = bls.Sign(privkey, signing_root)
+
+
 
 def run_deposit_request_processing(
         spec,
