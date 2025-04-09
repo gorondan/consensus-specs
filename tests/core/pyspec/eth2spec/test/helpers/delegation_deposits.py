@@ -1,7 +1,7 @@
 from eth2spec.test.helpers.forks import is_post_altair, is_post_electra
 from eth2spec.test.helpers.keys import pubkeys, privkeys
 from eth2spec.test.helpers.state import get_delegator_balance
-from eth2spec.utils.bls import bls
+from eth2spec.utils import bls
 
 
 def prepare_deposit_to_delegate_request(spec, delegator_index, amount,
@@ -57,7 +57,6 @@ def sign_deposit_to_delegate_data(spec, deposit_to_delegate_data, privkey, fork_
         domain = spec.compute_domain(spec.DOMAIN_DEPOSIT_TO_DELEGATE)
     signing_root = spec.compute_signing_root(deposit_to_delegate_message, domain)
     deposit_to_delegate_data.signature = bls.Sign(privkey, signing_root)
-
 
 
 def run_deposit_request_processing(

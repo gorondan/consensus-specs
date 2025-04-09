@@ -6,8 +6,6 @@ from eth2spec.test.helpers.delegation_deposits import prepare_deposit_to_delegat
 @with_eipxxxx_eods_and_later
 @spec_state_test
 def test_deposit_to_delegate_request_has_valid_signature(spec, state):
-    print("PUALMEA")
-    print(state.delegators)
     delegator_index = len(state.delegators)
     amount = spec.MIN_DEPOSIT_TO_DELEGATE_AMOUNT
 

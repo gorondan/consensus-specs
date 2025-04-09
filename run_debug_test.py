@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Ensure correct Python environment
-PYTHON_BIN = "/Users/alex/workspace/consensus-specs/venv/bin/python3"
+PYTHON_BIN = "python3"
 
 # Set required environment variables
 env = os.environ.copy()
@@ -12,6 +12,7 @@ env["PYTHONPATH"] = "eth2spec"
 NUM_WORKERS = "1"
 
 # Target test and test directory
+# test_keyword = "test_process_deposit_request_min_activation"
 test_keyword = "test_deposit_to_delegate_request_has_valid_signature"
 test_dir = "tests/core/pyspec/eth2spec"
 
