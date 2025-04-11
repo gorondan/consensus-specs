@@ -60,3 +60,13 @@ def test_deposit_to_delegate_request_increases_topup_delegator_balance(spec, sta
 @spec_state_test
 def test_deposit_to_delegate_request_increases_new_delegator_balance(spec, state):
     assert 1 > 1
+
+@with_eipxxxx_eods_and_later
+@spec_state_test
+def test_deposit_to_delegate_request_respects_churn_value(spec, state):
+    assert 1 > 1
+
+@with_eipxxxx_eods_and_later
+@spec_state_test
+def test_deposit_to_delegate_request_rolls_over_to_new_epoch_when_over_churn_value(spec, state):
+    assert 1 > 1

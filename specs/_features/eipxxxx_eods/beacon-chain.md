@@ -245,16 +245,30 @@ def process_deposit_to_delegate_request(state: BeaconState, deposit_to_delegate_
         signature=deposit_to_delegate_request.signature
     ))
 ```
+## Helper functions
 
+### Beacon state mutators
+
+#### New `increase_delegator_balance`
+
+```python
+def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
+    """
+    Increase the delegator balance at index ``delegator_index`` by ``delta``.
+    """
+    state.delegator_balances[delegator_index] += delta
+```
 ### Epoch processing
 
-#### New process_pending_deposits_to_delegate
+#### New `process_pending_deposits_to_delegate`
 
 ```python
 def process_pending_deposits_to_delegate(state: BeaconState) -> None:
-    # for deposit_to_delegate in state.pending_deposits_to_delegate:
-    #     #check churn and
+    # for deposit_to_delegate in state.pending_deposits_to_delegate:    
+    #     investigate if we need to use the index, to avoid double processing.
+    #     #check  churn
     #     apply_deposit_to_delegate(state, deposit_to_delegate)
+    #     remove deposit from queue
     pass
 ```
 
@@ -262,6 +276,7 @@ def process_pending_deposits_to_delegate(state: BeaconState) -> None:
 
 ```python
 def apply_deposit_to_delegate(state: BeaconState, deposit_to_delegate: PendingDepositToDelegate) -> None:
+  # verify is_valid_deposit_to_delegate_signature
   # delegator_index = get_delegator_index(state, deposit_to_delegate.pubkey)
   # if delegator_index is None:
   #   delegator_index = register_new_delegator(state, deposit_to_delegate.pubkey, deposit_to_delegate.withdrawal_credentials)
@@ -270,7 +285,7 @@ def apply_deposit_to_delegate(state: BeaconState, deposit_to_delegate: PendingDe
 ```
 
 
-#### Modified process_epoch
+#### Modified `process_epoch`
 
 ```python
 def process_epoch(state: BeaconState) -> None:
