@@ -1,3 +1,5 @@
+from build.lib.eth2spec.eipxxxx_eods.mainnet import PendingDepositToDelegate
+
 # EIP-XXX_eODS -- The Beacon Chain
 
 ## Table of contents
@@ -33,6 +35,19 @@ without dynamic validator selection or delegator governance.
 
 ## Preset
 
+### Execution
+
+| Name                                           | Value | Description                                                                                           |
+|------------------------------------------------| - |-------------------------------------------------------------------------------------------------------|
+| `MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD` | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS* Maximum number of execution layer deposit_to_delegate requests in each payload |
+
+### State list lengths
+
+| Name                                 | Value                                 | Unit                         |
+|--------------------------------------|---------------------------------------|------------------------------|
+| `DELEGATOR_REGISTRY_LIMIT`           | `uint64(2**40)` (= 1,099,511,627,776) | delegators                   |
+| `PENDING_DEPOSITS_TO_DELEGATE_LIMIT` | `uint64(2**27)` (= 134,217,728)       | pending deposits_to_delegate |
+
 ## Constants
 
 ### Misc
@@ -49,13 +64,13 @@ without dynamic validator selection or delegator governance.
 |------------------------------|----------------------------|
 | `DOMAIN_DEPOSIT_TO_DELEGATE` | `DomainType('0x07000000')` |
 
-### State list lengths
+## Configuration
 
-| Name                       | Value                                 |    Unit    |
-|----------------------------|---------------------------------------|:----------:|
-| `DELEGATOR_REGISTRY_LIMIT` | `uint64(2**40)` (= 1,099,511,627,776) | delegators |
+### Delegator cycle
 
----
+| Name                                                  | Value                  |
+|-------------------------------------------------------|------------------------|
+| `MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT` | `uint64(2**9)` (= 512) |
 
 ## Containers
 
@@ -104,7 +119,38 @@ class DelegatedValidator(Container):
     total_delegated_balance: Gwei
 ```
 
+#### `DepositToDelegateRequest`
+
+```python
+class DepositToDelegateRequest(Container):
+    pubkey: BLSPubkey
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    signature: BLSSignature
+    index: uint64
+```
+
+#### `PendingDepositToDelegate`
+
+```python
+class PendingDepositToDelegate(Container):
+  pubkey: BLSPubkey
+  withdrawal_credentials: Bytes32
+  amount: Gwei
+  signature: BLSSignature
+```
+
 ### Modified containers
+
+#### `ExecutionRequests`
+
+```python
+class ExecutionRequests(Container):
+    deposits: List[DepositRequest, MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD]
+    withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
+    consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
+    deposits_to_delegate: List[DepositToDelegateRequest, MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD] # [New in EIPXXXX_eODS]
+```
 
 #### `Validator`
 
@@ -181,38 +227,100 @@ class BeaconState(Container):
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]
+    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DEPOSITS_TO_DELEGATE_LIMIT]
 ```
 
 ## Beacon chain state transition function
 
-### Epoch processing
-
-#### New `apply_pending_deposit`
+### Block processing
 
 ```python
-def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
-    """
-    Applies ``deposit`` to the ``state``.
-    """
-    validator_pubkeys = [v.pubkey for v in state.validators]
-    if deposit.pubkey not in validator_pubkeys:
-        # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-        if is_valid_deposit_signature(
-                deposit.pubkey,
-                deposit.withdrawal_credentials,
-                deposit.amount,
-                deposit.signature
-        ):
-            add_validator_to_registry(state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount)
-    else:
-        validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
-        increase_balance(state, validator_index, deposit.amount)
+def process_deposit_to_delegate_request(state: BeaconState, deposit_to_delegate_request: DepositToDelegateRequest) -> None:
+
+    # Create pending deposit
+    state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
+        pubkey=deposit_to_delegate_request.pubkey,
+        withdrawal_credentials=deposit_to_delegate_request.withdrawal_credentials,
+        amount=deposit_to_delegate_request.amount,
+        signature=deposit_to_delegate_request.signature
+    ))
 ```
 
 ### Epoch processing
 
+#### New process_pending_deposits_to_delegate
+
+```python
+def process_pending_deposits_to_delegate(state: BeaconState) -> None:
+    # for deposit_to_delegate in state.pending_deposits_to_delegate:
+    #     #check churn and
+    #     apply_deposit_to_delegate(state, deposit_to_delegate)
+    pass
+```
+
+#### New `apply_pending_deposit`
+
+```python
+def apply_deposit_to_delegate(state: BeaconState, deposit_to_delegate: PendingDepositToDelegate) -> None:
+  # delegator_index = get_delegator_index(state, deposit_to_delegate.pubkey)
+  # if delegator_index is None:
+  #   delegator_index = register_new_delegator(state, deposit_to_delegate.pubkey, deposit_to_delegate.withdrawal_credentials)
+  # increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
+    pass
+```
+
+
+#### Modified process_epoch
+
+```python
+def process_epoch(state: BeaconState) -> None:
+    process_justification_and_finalization(state)
+    process_inactivity_updates(state)
+    process_rewards_and_penalties(state)
+    process_registry_updates(state)  # [Modified in Electra:EIP7251]
+    process_slashings(state)  # [Modified in Electra:EIP7251]
+    process_eth1_data_reset(state)
+    process_pending_deposits(state)  # [New in Electra:EIP7251]
+    process_pending_consolidations(state)  # [New in Electra:EIP7251]
+    process_pending_deposits_to_delegate(state)  # [New in EIPXXXX_eODS]
+    process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
+    process_slashings_reset(state)
+    process_randao_mixes_reset(state)
+    process_historical_summaries_update(state)
+    process_participation_flag_updates(state)
+    process_sync_committee_updates(state)
+```
+
+
 #### Operations
 
+##### Modified `process_operations`
+
+```python
+def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
+    # [Modified in Electra:EIP6110]
+    # Disable former deposit mechanism once all prior deposits are processed
+    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
+    if state.eth1_deposit_index < eth1_deposit_index_limit:
+        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+    else:
+        assert len(body.deposits) == 0
+
+    def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
+        for operation in operations:
+            fn(state, operation)
+
+    for_ops(body.proposer_slashings, process_proposer_slashing)
+    for_ops(body.attester_slashings, process_attester_slashing)
+    for_ops(body.attestations, process_attestation)  # [Modified in Electra:EIP7549]
+    for_ops(body.deposits, process_deposit)
+    for_ops(body.voluntary_exits, process_voluntary_exit)  # [Modified in Electra:EIP7251]
+    for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
+    for_ops(body.execution_requests.deposits, process_deposit_request)  # [New in Electra:EIP6110]
+    for_ops(body.execution_requests.withdrawals, process_withdrawal_request)  # [New in Electra:EIP7002:EIP7251]
+    for_ops(body.execution_requests.consolidations, process_consolidation_request)  # [New in Electra:EIP7251]
+    for_ops(body.execution_requests.deposits_to_delegate, process_deposit_to_delegate_request)  # [New in EIPXXXX_eODS]
+```
 ##### Deposits
 
 ###### New `is_valid_deposit_signature`

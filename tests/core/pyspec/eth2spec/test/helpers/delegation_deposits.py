@@ -1,4 +1,4 @@
-from eth2spec.test.helpers.forks import is_post_altair, is_post_electra
+from eth2spec.test.helpers.forks import is_post_electra
 from eth2spec.test.helpers.keys import pubkeys, privkeys
 from eth2spec.test.helpers.state import get_delegator_balance
 from eth2spec.utils import bls
@@ -28,7 +28,7 @@ def prepare_deposit_to_delegate_request(spec, delegator_index, amount,
         withdrawal_credentials = spec.BLS_WITHDRAWAL_PREFIX + spec.hash(pubkey)[1:]
 
     deposit_to_delegate_data = build_deposit_to_delegate_data(spec, pubkey, privkey, amount, withdrawal_credentials, signed=signed)
-    return spec.DepositRequest(
+    return spec.DepositToDelegateRequest(
         pubkey=deposit_to_delegate_data.pubkey,
         withdrawal_credentials=deposit_to_delegate_data.withdrawal_credentials,
         amount=deposit_to_delegate_data.amount,
@@ -58,8 +58,7 @@ def sign_deposit_to_delegate_data(spec, deposit_to_delegate_data, privkey, fork_
     signing_root = spec.compute_signing_root(deposit_to_delegate_message, domain)
     deposit_to_delegate_data.signature = bls.Sign(privkey, signing_root)
 
-
-def run_deposit_request_processing(
+def run_deposit_to_delegate_request_processing(
         spec,
         state,
         deposit_request,
@@ -83,14 +82,9 @@ def run_deposit_request_processing(
         pre_balance = get_delegator_balance(state, delegator_index)
         pre_effective_delegated_balance = state.delegators[delegator_index].effective_delegated_balance
 
-    yield 'pre', state
-    yield 'deposit_request', deposit_request
-
     spec.process_deposit_request(state, deposit_request)
 
-    yield 'post', state
-
-    # New validator is only created after the pending_deposits processing
+    # New delegator is created only after processing the deposit_to_delegate
     assert len(state.delegators) == pre_delegator_count
     assert len(state.delegators_balances) == pre_delegator_count
 
