@@ -146,7 +146,7 @@ class PendingDepositToDelegate(Container):
 
 ```python
 class ExecutionRequests(Container):
-    deposits: List[DepositRequest, MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD]
+    deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
     withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
     consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
     deposits_to_delegate: List[DepositToDelegateRequest, MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD] # [New in EIPXXXX_eODS]
