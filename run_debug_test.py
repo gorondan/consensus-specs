@@ -13,7 +13,7 @@ NUM_WORKERS = "1"
 
 # Target test and test directory
 # test_keyword = "test_process_deposit_request_min_activation"
-test_keyword = "test_deposit_to_delegate_request_has_valid_signature"
+test_keyword = "test_deposit_to_delegate_request_creates_delegator_if_needed"
 test_dir = "tests/core/pyspec/eth2spec"
 
 # JUnit output path

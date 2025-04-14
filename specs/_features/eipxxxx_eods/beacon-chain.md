@@ -1,4 +1,4 @@
-from build.lib.eth2spec.eipxxxx_eods.mainnet import PendingDepositToDelegate
+from build.lib.eth2spec.eipxxxx_eods.mainnet import is_valid_deposit_to_delegate_signaturefrom build.lib.eth2spec.eipxxxx_eods.mainnet import MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT
 
 # EIP-XXX_eODS -- The Beacon Chain
 
@@ -37,8 +37,8 @@ without dynamic validator selection or delegator governance.
 
 ### Execution
 
-| Name                                           | Value | Description                                                                                           |
-|------------------------------------------------| - |-------------------------------------------------------------------------------------------------------|
+| Name                                           | Value                     | Description                                                                                           |
+|------------------------------------------------|---------------------------|-------------------------------------------------------------------------------------------------------|
 | `MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD` | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS* Maximum number of execution layer deposit_to_delegate requests in each payload |
 
 ### State list lengths
@@ -65,6 +65,12 @@ without dynamic validator selection or delegator governance.
 | `DOMAIN_DEPOSIT_TO_DELEGATE` | `DomainType('0x07000000')` |
 
 ## Configuration
+
+### Time parameters
+
+| Name                                  | Value                    |  Unit  |  Duration  |
+|---------------------------------------|--------------------------|:------:|:----------:|
+| `MIN_DELEGATOR_WITHDRAWABILITY_DELAY` | `uint64(2**11)` (= 2048) | epochs | ~218 hours |
 
 ### Delegator cycle
 
@@ -134,10 +140,10 @@ class DepositToDelegateRequest(Container):
 
 ```python
 class PendingDepositToDelegate(Container):
-  pubkey: BLSPubkey
-  withdrawal_credentials: Bytes32
-  amount: Gwei
-  signature: BLSSignature
+    pubkey: BLSPubkey
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    signature: BLSSignature
 ```
 
 ### Modified containers
@@ -149,7 +155,7 @@ class ExecutionRequests(Container):
     deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
     withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
     consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
-    deposits_to_delegate: List[DepositToDelegateRequest, MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD] # [New in EIPXXXX_eODS]
+    deposits_to_delegate: List[DepositToDelegateRequest, MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
 #### `Validator`
@@ -235,8 +241,8 @@ class BeaconState(Container):
 ### Block processing
 
 ```python
-def process_deposit_to_delegate_request(state: BeaconState, deposit_to_delegate_request: DepositToDelegateRequest) -> None:
-
+def process_deposit_to_delegate_request(state: BeaconState,
+                                        deposit_to_delegate_request: DepositToDelegateRequest) -> None:
     # Create pending deposit
     state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
         pubkey=deposit_to_delegate_request.pubkey,
@@ -245,6 +251,7 @@ def process_deposit_to_delegate_request(state: BeaconState, deposit_to_delegate_
         signature=deposit_to_delegate_request.signature
     ))
 ```
+
 ## Helper functions
 
 ### Beacon state mutators
@@ -256,34 +263,48 @@ def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorInd
     """
     Increase the delegator balance at index ``delegator_index`` by ``delta``.
     """
-    state.delegator_balances[delegator_index] += delta
+    state.delegators_balances[delegator_index] += delta
 ```
+
 ### Epoch processing
 
 #### New `process_pending_deposits_to_delegate`
 
 ```python
 def process_pending_deposits_to_delegate(state: BeaconState) -> None:
-    # for deposit_to_delegate in state.pending_deposits_to_delegate:    
-    #     investigate if we need to use the index, to avoid double processing.
-    #     #check  churn
-    #     apply_deposit_to_delegate(state, deposit_to_delegate)
-    #     remove deposit from queue
-    pass
+    current_deposit_to_delegate_index = 0
+    
+    for deposit_to_delegate in state.pending_deposits_to_delegate:
+        if (current_deposit_to_delegate_index >= MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT):
+            break
+
+        apply_deposit_to_delegate(state, deposit_to_delegate)
+        
+        current_deposit_to_delegate_index += 1
+    
+    state.pending_deposits_to_delegate = state.pending_deposits_to_delegate[current_deposit_to_delegate_index:]
+
 ```
 
 #### New `apply_pending_deposit`
 
 ```python
 def apply_deposit_to_delegate(state: BeaconState, deposit_to_delegate: PendingDepositToDelegate) -> None:
-  # verify is_valid_deposit_to_delegate_signature
-  # delegator_index = get_delegator_index(state, deposit_to_delegate.pubkey)
-  # if delegator_index is None:
-  #   delegator_index = register_new_delegator(state, deposit_to_delegate.pubkey, deposit_to_delegate.withdrawal_credentials)
-  # increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
-    pass
-```
+  if not is_valid_deposit_to_delegate_signature(
+          deposit_to_delegate.pubkey,
+          deposit_to_delegate.withdrawal_credentials,
+          deposit_to_delegate.amount,
+          deposit_to_delegate.signature
+  ):
+    return
 
+  delegators_pubkeys = [d.pubkey for d in state.delegators]
+  if deposit_to_delegate.pubkey not in delegators_pubkeys:
+    delegator_index = register_new_delegator(state, deposit_to_delegate.pubkey, deposit_to_delegate.withdrawal_credentials)
+  else:
+    delegator_index = DelegatorIndex(delegators_pubkeys.index(deposit_to_delegate.pubkey))
+  increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
+```
 
 #### Modified `process_epoch`
 
@@ -305,7 +326,6 @@ def process_epoch(state: BeaconState) -> None:
     process_participation_flag_updates(state)
     process_sync_committee_updates(state)
 ```
-
 
 #### Operations
 
@@ -336,6 +356,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     for_ops(body.execution_requests.consolidations, process_consolidation_request)  # [New in Electra:EIP7251]
     for_ops(body.execution_requests.deposits_to_delegate, process_deposit_to_delegate_request)  # [New in EIPXXXX_eODS]
 ```
+
 ##### Deposits
 
 ###### New `is_valid_deposit_signature`
@@ -354,4 +375,11 @@ def is_valid_deposit_to_delegate_signature(pubkey: BLSPubkey,
         DOMAIN_DEPOSIT_TO_DELEGATE)  # Fork-agnostic domain since delegation deposits are valid across forks
     signing_root = compute_signing_root(deposit_to_delegate_message, domain)
     return bls.Verify(pubkey, signing_root, signature)
+```
+
+###### New `is_withdrawable_from_delegator`
+
+```python
+def is_withdrawable_from_delegator(state: BeaconState, delegator: Delegator) -> bool:
+    return state.epoch > delegator.delegator_entry_epoch + MIN_DELEGATOR_WITHDRAWABILITY_DELAY
 ```

@@ -65,7 +65,7 @@ def register_new_delegator(state: BeaconState, pubkey: BLSPubkey, withdrawal_cre
         pubkey=pubkey,
         withdrawal_credentials=withdrawal_credentials,
         effective_delegated_balance=Gwei(0),
-        delegation_entry_epoch=compute_epoch_at_slot(state.slot),
+        delegator_entry_epoch=compute_epoch_at_slot(state.slot),
     )
     state.delegators.append(delegator)
     state.delegators_balances.append(Gwei(0))
