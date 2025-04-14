@@ -4,7 +4,6 @@ from eth2spec.test.helpers.state import get_delegator_balance
 from eth2spec.utils import bls
 
 def run_add_new_delegator(spec, state, pubkey, privkey, amount):
-
     withdrawal_credentials = (
             spec.COMPOUNDING_WITHDRAWAL_PREFIX
             + b'\x00' * 11  # specified 0s

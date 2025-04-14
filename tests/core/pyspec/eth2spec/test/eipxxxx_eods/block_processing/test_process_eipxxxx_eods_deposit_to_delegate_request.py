@@ -1,4 +1,5 @@
-from build.lib.eth2spec.eipxxxx_eods.mainnet import MIN_DEPOSIT_TO_DELEGATE_AMOUNT
+from build.lib.eth2spec.eipxxxx_eods.mainnet import MIN_DEPOSIT_TO_DELEGATE_AMOUNT, \
+    MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT
 from build.lib.eth2spec.test.helpers.keys import pubkeys, privkeys
 from eth2spec.test.context import spec_state_test, expect_assertion_error, \
     with_eipxxxx_eods_and_later
@@ -33,13 +34,6 @@ def test_deposit_to_delegate_request_creates_delegator_if_needed(spec, state):
 
     assert len(state.delegators) == initial_delegators_len + 1
 
-    # sign the deposit_to_delegate_message and get a DepositToDelegateRequest
-    # call spec.process_deposit_to_delegate_request give it DepositToDelegateRequest, this will add it to state.pending_deposits_to_delegate
-
-    # call spec.process_pending_deposits_to_delegate(state)
-
-    # assert we should have a bigger len(state.delegators) than initial_delegators_len
-
 
 @with_eipxxxx_eods_and_later
 @spec_state_test
@@ -72,28 +66,35 @@ def test_deposit_to_delegate_request_does_top_up_if_needed(spec, state):
     assert len(state.delegators) == pre_topup_number_of_delegators
     assert state.delegators_balances[0] == 2 * spec.MIN_DEPOSIT_TO_DELEGATE_AMOUNT
 
-@with_eipxxxx_eods_and_later
-@spec_state_test
-def test_deposit_to_delegate_request_increases_topup_delegator_balance(spec, state):
-    assert 1 > 1
-
 
 @with_eipxxxx_eods_and_later
 @spec_state_test
-def test_deposit_to_delegate_request_increases_new_delegator_balance(spec, state):
-    assert 1 > 1
+def test_deposit_to_delegate_request_respects_max_processing_limit_value(spec, state):
+    extra_deposits = 100
 
+    for i in range(spec.MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT + extra_deposits):
+        pubkey = pubkeys[i]
+        privkey = privkeys[i]
+        amount = spec.MIN_DEPOSIT_TO_DELEGATE_AMOUNT
+        withdrawal_credentials = (
+                spec.COMPOUNDING_WITHDRAWAL_PREFIX
+                + b'\x00' * 11  # specified 0s
+                + b'\x59' * 20  # a 20-byte eth1 address
+        )
+        # this is a mock of EL message
+        deposit_to_delegate_message = spec.DepositToDelegateMessage(
+            pubkey=pubkey,
+            withdrawal_credentials=withdrawal_credentials,
+            amount=amount,
+        )
 
-@with_eipxxxx_eods_and_later
-@spec_state_test
-def test_deposit_to_delegate_request_respects_churn_value(spec, state):
-    assert 1 > 1
+        deposit_to_delegate_request = sign_deposit_to_delegate_message(spec, deposit_to_delegate_message, privkey)
+        spec.process_deposit_to_delegate_request(state, deposit_to_delegate_request)
 
+    spec.process_pending_deposits_to_delegate(state)
 
-@with_eipxxxx_eods_and_later
-@spec_state_test
-def test_deposit_to_delegate_request_rolls_over_to_new_epoch_when_over_churn_value(spec, state):
-    assert 1 > 1
+    assert len(state.delegators) <= spec.MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT
+    assert len(state.pending_deposits_to_delegate) == extra_deposits
 
 
 @with_eipxxxx_eods_and_later
