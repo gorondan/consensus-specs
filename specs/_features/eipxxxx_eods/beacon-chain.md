@@ -104,7 +104,7 @@ class Delegator(Container):
     pubkey: BLSPubkey
     withdrawal_credentials: Bytes32
     effective_delegated_balance: Gwei
-    delegation_entry_epoch: Epoch
+    delegator_entry_epoch: Epoch
 ```
 
 #### `DelegatedValidator`
