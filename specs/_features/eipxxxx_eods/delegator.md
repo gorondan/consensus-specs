@@ -102,10 +102,10 @@ def fast_redelegate(
     to_validator.delegators_quotas[subindex] += updated_quota
 ```
 
-### priority_exit
+### early_exit_liquidity
 
 ```python
-def priority_exit(
+def early_exit_liquidity(
     state: BeaconState,
     delegator_index: DelegatorIndex,
     validator_index: ValidatorIndex,
