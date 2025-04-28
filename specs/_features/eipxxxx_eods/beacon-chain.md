@@ -170,8 +170,8 @@ class Validator(Container):
     activation_epoch: Epoch
     exit_epoch: Epoch
     withdrawable_epoch: Epoch
-    delegated: boolean
-    fee_quotient: uint64
+    delegated: boolean # [New in EIPXXXX_eODS]
+    fee_quotient: uint64 # [New in EIPXXXX_eODS]
 ```
 
 #### `BeaconState`
@@ -230,10 +230,10 @@ class BeaconState(Container):
     pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
     pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]  # [New in Electra:EIP7251]
     # Delegation additions
-    delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]
-    delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
-    delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]
-    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DEPOSITS_TO_DELEGATE_LIMIT]
+    delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT] #[New in EIPXXXX_eODS]
+    delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT] #[New in EIPXXXX_eODS]
+    delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT] #[New in EIPXXXX_eODS]
+    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DEPOSITS_TO_DELEGATE_LIMIT] #[New in EIPXXXX_eODS]
 ```
 
 ## Beacon chain state transition function
@@ -358,6 +358,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 ```
 
 ##### Deposits
+
 
 ###### New `is_valid_deposit_signature`
 
