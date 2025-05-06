@@ -1,0 +1,89 @@
+CONSTANTS
+    MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD
+        how many deposit to delegate requests are in a block (when then arrive from EL to CL)
+
+    DELEGATOR_REGISTRY_LIMIT
+        max len on the list that holds the delegators in BC
+
+    PENDING_DEPOSITS_TO_DELEGATE_LIMIT
+        max len on the list that holds the pending requests queued to be processed
+
+    MIN_DEPOSIT_TO_DELEGATE_AMOUNT
+        min amount of Gwei needed to create a new delegator
+
+    MIN_DELEGATOR_WITHDRAWABILITY_DELAY
+        min cooldown period needed before a withdrawal to wallet can be done
+
+    MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT
+        the max number of requests to delegate that can be processed per epoch
+
+CONTAINERS
+    DepositToDelegateMessage
+        This is the deposit to delegate message that comes from EL
+
+    [TODO: REMOVE] DepositToDelegateData
+
+    Delegator
+
+    DelegatedValidator
+        Wrapper around an existing Validator
+
+    DepositToDelegateRequest
+        The item representing a deposit to delegate request that comes from EL
+
+    PendingDepositToDelegate
+        The queueable item representing a deposit to delegate request
+
+    ExecutionRequests (modified)
+        This payload object contains all the types of requests that come from EL: deposits, withdrawals, consolidations
+        Added the list of deposits_to_delegate.
+
+    Validator (modified)
+
+    BeaconState (modified)
+
+FUNCTIONS
+    process_deposit_to_delegate_request
+        It takes every DepositToDelegateRequest, converts it into a PendingDepositToDelegate and appends it to the queue (pending_deposits_to_delegate, in BC)
+
+    increase_delegator_balance
+        Increases the delegator balance. It is used my many operations.
+
+    process_pending_deposits_to_delegate
+        Processes pending_deposits_to_delegate items, checking for limits and churns. Will call apply_pending_deposit upon success.
+
+    apply_pending_deposit
+        Applies the deposit itself, after checking signature validity. Decides if a new Delegator or top up is needed.
+
+    process_epoch (modified)
+        Added a call to our process_pending_deposits_to_delegate.
+
+    process_operations (modified)
+        Added a call to out process_deposit_to_delegate_request.
+
+    is_valid_deposit_signature
+        Checks signature validity
+
+    is_withdrawable_from_delegator
+        TODO: not used!!
+
+    deposit_to_delegator_balance
+
+
+    compute_pending_rewards
+
+    withdraw_to_wallet
+
+    get_delegator_index
+
+    register_new_delegator
+
+    delegate_to_validator
+
+    withdraw_from_validator
+
+    fast_redelegate
+
+    early_exit_liquidity
+
+    receive_partial_withdrawal
