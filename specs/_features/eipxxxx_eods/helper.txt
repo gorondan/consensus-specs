@@ -21,7 +21,8 @@ CONTAINERS
     DepositToDelegateMessage
         This is the deposit to delegate message that comes from EL
 
-    [TODO: REMOVE] DepositToDelegateData
+    DepositToDelegateData
+        TODO: remove
 
     Delegator
 
@@ -67,23 +68,32 @@ FUNCTIONS
     is_withdrawable_from_delegator
         TODO: not used!!
 
-    deposit_to_delegator_balance
-
+    deposit_to_delegator_balance (BCA)
+        TODO: remove this, no longer used
 
     compute_pending_rewards
+        TODO: not used
 
     withdraw_to_wallet
+        TODO: not used
 
     get_delegator_index
+        TODO: remove, not needed
 
     register_new_delegator
+        Adds a new instance of Delegator into the delegators list, and sets its balance to 0
 
     delegate_to_validator
+        TODO: not used
 
     withdraw_from_validator
+        TODO: not used
 
     fast_redelegate
+        TODO: not used
 
     early_exit_liquidity
+        TODO: not used
 
     receive_partial_withdrawal
+        TODO: not used
