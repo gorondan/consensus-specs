@@ -1,12 +1,6 @@
 # Electra -- Fork Logic
 
-*Note*: This document is a work-in-progress for researchers and implementers.
-
-## Table of contents
-
-<!-- TOC -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
 - [Configuration](#configuration)
@@ -17,8 +11,7 @@
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- /TOC -->
+<!-- mdformat-toc end -->
 
 ## Introduction
 
@@ -28,10 +21,10 @@ This document describes the process of the Electra upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name | Value |
-| - | - |
-| `ELECTRA_FORK_VERSION` | `Version('0x05000000')` |
-| `ELECTRA_FORK_EPOCH` | `Epoch(18446744073709551615)` **TBD** |
+| Name                   | Value                                         |
+| ---------------------- | --------------------------------------------- |
+| `ELECTRA_FORK_VERSION` | `Version('0x05000000')`                       |
+| `ELECTRA_FORK_EPOCH`   | `Epoch(364032)` (May 7, 2025, 10:05:11am UTC) |
 
 ## Helper functions
 

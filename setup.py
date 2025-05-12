@@ -11,7 +11,7 @@ from collections import OrderedDict
 from distutils import dir_util
 from distutils.util import convert_path
 from functools import lru_cache
-from marko.block import Heading, FencedCode, LinkRefDef, BlankLine
+from marko.block import Heading, FencedCode, HTMLBlock, BlankLine
 from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table
 from marko.inline import CodeSpan
@@ -26,7 +26,6 @@ sys.path.insert(0, pysetup_path)
 
 from pysetup.constants import (
     PHASE0,
-    ETH2_SPEC_COMMENT_PREFIX,
 )
 from pysetup.helpers import (
     combine_spec_objects,
@@ -150,17 +149,6 @@ ALL_CURDLEPROOFS_CRS = {
 
 
 @lru_cache(maxsize=None)
-def _get_eth2_spec_comment(child: LinkRefDef) -> Optional[str]:
-    title = child.title
-    if not (title[0] == "(" and title[len(title)-1] == ")"):
-        return None
-    title = title[1:len(title)-1]
-    if not title.startswith(ETH2_SPEC_COMMENT_PREFIX):
-        return None
-    return title[len(ETH2_SPEC_COMMENT_PREFIX):].strip()
-
-
-@lru_cache(maxsize=None)
 def _parse_value(name: str, typed_value: str, type_hint: Optional[str] = None) -> VariableDefinition:
     comment = None
     if name in ("ROOT_OF_UNITY_EXTENDED", "ROOTS_OF_UNITY_EXTENDED", "ROOTS_OF_UNITY_REDUCED"):
@@ -207,6 +195,29 @@ def _update_constant_vars_with_curdleproofs_crs(constant_vars, preset_dep_consta
 @lru_cache(maxsize=None)
 def parse_markdown(content: str):
     return gfm.parse(content)
+
+
+def check_yaml_matches_spec(var_name, yaml, value_def):
+    """
+    This function performs a sanity check for presets & configs. To a certain degree, it ensures
+    that the values in the specifications match those in the yaml files.
+    """
+    if var_name == "TERMINAL_BLOCK_HASH":
+        # This is just Hash32() in the specs, that's fine
+        return
+
+    # We use a var in the definition of a new var, replace usages
+    # Reverse sort so that overridden values come first
+    updated_value = value_def.value
+    for var in sorted(yaml.keys(), reverse=True):
+        if var in updated_value:
+            updated_value = updated_value.replace(var, yaml[var])
+    try:
+        assert yaml[var_name] == repr(eval(updated_value)), \
+            f"mismatch for {var_name}: {yaml[var_name]} vs {eval(updated_value)}"
+    except NameError:
+        # Okay it's probably something more serious, let's ignore
+        pass
 
 
 def get_spec(file_name: Path, preset: Dict[str, str], config: Dict[str, str], preset_name=str) -> SpecObject:
@@ -312,8 +323,12 @@ def get_spec(file_name: Path, preset: Dict[str, str], config: Dict[str, str], pr
 
                     value_def = _parse_value(name, value)
                     if name in preset:
+                        if preset_name == "mainnet":
+                            check_yaml_matches_spec(name, preset, value_def)
                         preset_vars[name] = VariableDefinition(value_def.type_name, preset[name], value_def.comment, None)
                     elif name in config:
+                        if preset_name == "mainnet":
+                            check_yaml_matches_spec(name, config, value_def)
                         config_vars[name] = VariableDefinition(value_def.type_name, config[name], value_def.comment, None)
                     else:
                         if name in ('ENDIANNESS', 'KZG_ENDIANNESS'):
@@ -324,9 +339,8 @@ def get_spec(file_name: Path, preset: Dict[str, str], config: Dict[str, str], pr
                         else:
                             constant_vars[name] = value_def
 
-        elif isinstance(child, LinkRefDef):
-            comment = _get_eth2_spec_comment(child)
-            if comment == "skip":
+        elif isinstance(child, HTMLBlock):
+            if child.body.strip() == "<!-- eth2spec: skip -->":
                 should_skip = True
 
     # Load KZG trusted setup from files

@@ -1,9 +1,6 @@
 # EIP-7805 -- Fork Choice
 
-## Table of contents
-<!-- TOC -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
 - [Configuration](#configuration)
@@ -16,8 +13,7 @@
       - [Modified `get_proposer_head`](#modified-get_proposer_head)
     - [New `on_inclusion_list`](#new-on_inclusion_list)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- /TOC -->
+<!-- mdformat-toc end -->
 
 ## Introduction
 
@@ -27,8 +23,8 @@ This is the modification of the fork choice accompanying the EIP-7805 upgrade.
 
 ### Time parameters
 
-| Name | Value | Unit | Duration |
-| - | - | :-: | :-: |
+| Name                   | Value                           |  Unit   | Duration  |
+| ---------------------- | ------------------------------- | :-----: | :-------: |
 | `VIEW_FREEZE_DEADLINE` | `SECONDS_PER_SLOT * 2 // 3 + 1` | seconds | 9 seconds |
 
 ## Fork choice
@@ -74,9 +70,6 @@ def validate_inclusion_lists(store: Store,
     invalid when appended to the end of the payload unless the block is full.
     """
     # pylint: disable=unused-argument
-
-    # Verify inclusion list is a valid length
-    assert len(inclusion_list_transactions) <= MAX_TRANSACTIONS_PER_INCLUSION_LIST * INCLUSION_LIST_COMMITTEE_SIZE
 
     # Verify inclusion list transactions are present in the execution payload
     contains_all_txs = all(tx in execution_payload.transactions for tx in inclusion_list_transactions)

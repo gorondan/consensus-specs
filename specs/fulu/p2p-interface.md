@@ -2,23 +2,19 @@
 
 *Note*: This document is a work-in-progress for researchers and implementers.
 
-## Table of contents
-
-<!-- TOC -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
 - [Modifications in Fulu](#modifications-in-fulu)
   - [Preset](#preset)
   - [Configuration](#configuration)
   - [Containers](#containers)
-    - [`DataColumnIdentifier`](#datacolumnidentifier)
+    - [`DataColumnsByRootIdentifier`](#datacolumnsbyrootidentifier)
   - [Helpers](#helpers)
-      - [`verify_data_column_sidecar`](#verify_data_column_sidecar)
-      - [`verify_data_column_sidecar_kzg_proofs`](#verify_data_column_sidecar_kzg_proofs)
-      - [`verify_data_column_sidecar_inclusion_proof`](#verify_data_column_sidecar_inclusion_proof)
-      - [`compute_subnet_for_data_column_sidecar`](#compute_subnet_for_data_column_sidecar)
+    - [`verify_data_column_sidecar`](#verify_data_column_sidecar)
+    - [`verify_data_column_sidecar_kzg_proofs`](#verify_data_column_sidecar_kzg_proofs)
+    - [`verify_data_column_sidecar_inclusion_proof`](#verify_data_column_sidecar_inclusion_proof)
+    - [`compute_subnet_for_data_column_sidecar`](#compute_subnet_for_data_column_sidecar)
   - [MetaData](#metadata)
   - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
     - [Topics and messages](#topics-and-messages)
@@ -30,6 +26,8 @@
         - [Distributed Blob Publishing using blobs retrieved from local execution layer client](#distributed-blob-publishing-using-blobs-retrieved-from-local-execution-layer-client)
   - [The Req/Resp domain](#the-reqresp-domain)
     - [Messages](#messages)
+      - [BlobSidecarsByRange v1](#blobsidecarsbyrange-v1)
+      - [BlobSidecarsByRoot v1](#blobsidecarsbyroot-v1)
       - [DataColumnSidecarsByRange v1](#datacolumnsidecarsbyrange-v1)
       - [DataColumnSidecarsByRoot v1](#datacolumnsidecarsbyroot-v1)
       - [GetMetaData v3](#getmetadata-v3)
@@ -37,8 +35,7 @@
     - [ENR structure](#enr-structure)
       - [Custody group count](#custody-group-count)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- /TOC -->
+<!-- mdformat-toc end -->
 
 ## Introduction
 
@@ -51,27 +48,27 @@ The specification of these changes continues in the same format as the network s
 ### Preset
 
 | Name                                    | Value                                                                                     | Description                                                       |
-|-----------------------------------------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+| --------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH` | `uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')))` (= 4) | <!-- predefined --> Merkle proof index for `blob_kzg_commitments` |
 
 ### Configuration
 
 *[New in Fulu:EIP7594]*
 
-| Name                                           | Value                                                 | Description                                                               |
-|------------------------------------------------|-------------------------------------------------------|---------------------------------------------------------------------------|
-| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `128`                                                 | The number of data column sidecar subnets used in the gossipsub protocol  |
-| `MAX_REQUEST_DATA_COLUMN_SIDECARS`             | `MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS`        | Maximum number of data column sidecars in a single request                |
-| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `2**12` (= 4096 epochs, ~18 days)                     | The minimum epoch range over which a node must serve data column sidecars |
+| Name                                           | Value                                          | Description                                                               |
+| ---------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------- |
+| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `128`                                          | The number of data column sidecar subnets used in the gossipsub protocol  |
+| `MAX_REQUEST_DATA_COLUMN_SIDECARS`             | `MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS` | Maximum number of data column sidecars in a single request                |
+| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `2**12` (= 4096 epochs, ~18 days)              | The minimum epoch range over which a node must serve data column sidecars |
 
 ### Containers
 
-#### `DataColumnIdentifier`
+#### `DataColumnsByRootIdentifier`
 
 ```python
-class DataColumnIdentifier(Container):
+class DataColumnsByRootIdentifier(Container):
     block_root: Root
-    index: ColumnIndex
+    columns: List[ColumnIndex, NUMBER_OF_COLUMNS]
 ```
 
 ### Helpers
@@ -211,14 +208,38 @@ Honest nodes SHOULD query `engine_getBlobsV2` as soon as they receive a valid `b
 
 Implementers are encouraged to leverage this method to increase the likelihood of incorporating and attesting to the last block when its proposer is not able to publish data columns on time.
 
-When clients use the local execution layer to retrieve blob and compute data columns, they MUST behave as if the imported `data_column_sidecar` had been received via gossip. In particular, clients MUST:
+When clients use the local execution layer to retrieve blobs, they SHOULD skip verification of those blobs. When subsequently importing the blobs as data columns, they MUST behave as if the `data_column_sidecar` had been received via gossip. In particular, clients MUST:
 
-* Publish the corresponding `data_column_sidecar` on the `data_column_sidecar_{subnet_id}` topic **if and only if** they are **subscribed** to it, either due to custody requirements or additional sampling.
-* Update gossip rule related data structures (i.e. update the anti-equivocation cache).
+- Publish the corresponding `data_column_sidecar` on the `data_column_sidecar_{subnet_id}` topic **if and only if** they are **subscribed** to it, either due to custody requirements or additional sampling.
+- Update gossip rule related data structures (i.e. update the anti-equivocation cache).
 
 ### The Req/Resp domain
 
 #### Messages
+
+##### BlobSidecarsByRange v1
+
+**Protocol ID:** `/eth2/beacon_chain/req/blob_sidecars_by_range/1/`
+
+Deprecated as of `FULU_FORK_EPOCH + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS`.
+
+During the deprecation transition period:
+
+- Clients MUST respond with a list of blob sidecars from the range `[min(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, FULU_FORK_EPOCH), FULU_FORK_EPOCH)` if the requested range includes any epochs in this interval.
+- Clients MAY respond with an empty list if the requested range lies entirely at or after `FULU_FORK_EPOCH`.
+- Clients SHOULD NOT penalize peers for requesting blob sidecars from `FULU_FORK_EPOCH`.
+
+##### BlobSidecarsByRoot v1
+
+**Protocol ID:** `/eth2/beacon_chain/req/blob_sidecars_by_root/1/`
+
+Deprecated as of `FULU_FORK_EPOCH + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS`.
+
+During the deprecation transition period:
+
+- Clients MUST respond with blob sidecars corresponding to block roots from the range `[min(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, FULU_FORK_EPOCH), FULU_FORK_EPOCH)` if any of the requested roots correspond to blocks in this interval.
+- Clients MAY respond with an empty list if all requested roots correspond to blocks at or after `FULU_FORK_EPOCH`.
+- Clients SHOULD NOT penalize peers for requesting blob sidecars from `FULU_FORK_EPOCH`.
 
 ##### DataColumnSidecarsByRange v1
 
@@ -226,10 +247,10 @@ When clients use the local execution layer to retrieve blob and compute data col
 
 The `<context-bytes>` field is calculated as `context = compute_fork_digest(fork_version, genesis_validators_root)`:
 
-[1]: # (eth2spec: skip)
+<!-- eth2spec: skip -->
 
 | `fork_version`      | Chunk SSZ type           |
-|---------------------|--------------------------|
+| ------------------- | ------------------------ |
 | `FULU_FORK_VERSION` | `fulu.DataColumnSidecar` |
 
 Request Content:
@@ -309,17 +330,17 @@ After the initial data column sidecar, clients MAY stop in the process of respon
 
 The `<context-bytes>` field is calculated as `context = compute_fork_digest(fork_version, genesis_validators_root)`:
 
-[1]: # (eth2spec: skip)
+<!-- eth2spec: skip -->
 
 | `fork_version`      | Chunk SSZ type           |
-|---------------------|--------------------------|
+| ------------------- | ------------------------ |
 | `FULU_FORK_VERSION` | `fulu.DataColumnSidecar` |
 
 Request Content:
 
 ```
 (
-  List[DataColumnIdentifier, MAX_REQUEST_DATA_COLUMN_SIDECARS]
+  List[DataColumnsByRootIdentifier, MAX_REQUEST_BLOCKS_DENEB]
 )
 ```
 
@@ -331,8 +352,8 @@ Response Content:
 )
 ```
 
-Requests sidecars by block root and index.
-The response is a list of `DataColumnIdentifier` whose length is less than or equal to the number of requests.
+Requests data column sidecars by block root and column indices.
+The response is a list of `DataColumnSidecar` whose length is less than or equal to `requested_columns_count`, where `requested_columns_count = sum(len(r.columns) for r in request)`.
 It may be less in the case that the responding peer is missing blocks or sidecars.
 
 Before consuming the next response chunk, the response reader SHOULD verify the data column sidecar is well-formatted through `verify_data_column_sidecar`, has valid inclusion proof through `verify_data_column_sidecar_inclusion_proof`, and is correct w.r.t. the expected KZG commitments through `verify_data_column_sidecar_kzg_proofs`.
@@ -375,6 +396,6 @@ Requests the MetaData of a peer, using the new `MetaData` definition given above
 
 A new field is added to the ENR under the key `cgc` to facilitate custody data column discovery.
 
-| Key    | Value                                    |
-|--------|------------------------------------------|
-| `cgc`  | Custody group count, `uint64` big endian integer with no leading zero bytes (`0` is encoded as empty byte string) |
+| Key   | Value                                                                                                             |
+| ----- | ----------------------------------------------------------------------------------------------------------------- |
+| `cgc` | Custody group count, `uint64` big endian integer with no leading zero bytes (`0` is encoded as empty byte string) |

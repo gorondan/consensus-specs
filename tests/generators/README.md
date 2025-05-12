@@ -9,20 +9,18 @@ On releases, test generators are run by the release manager. Test-generation of 
 
 An automated nightly tests release system, with a config filter applied, is being considered as implementation needs mature.
 
-## Table of contents
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [How to run generators](#how-to-run-generators)
   - [Cleaning](#cleaning)
   - [Running all test generators](#running-all-test-generators)
   - [Running a single generator](#running-a-single-generator)
+  - [Running generators for specific tests](#running-generators-for-specific-tests)
 - [Developing a generator](#developing-a-generator)
 - [How to add a new test generator](#how-to-add-a-new-test-generator)
 - [How to remove a test generator](#how-to-remove-a-test-generator)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- mdformat-toc end -->
 
 ## How to run generators
 
@@ -55,6 +53,38 @@ The makefile auto-detects generators in the `tests/generators` directory and pro
 
 ```bash
 make gen_ssz_static
+```
+
+### Running generators for specific tests
+
+Arguments can be appended to configure exactly what tests should be generated (`k=<test>`), on which forks (`fork=<fork>`), and which presets (`preset=<preset>`). The arguments can be used individually or altogether. See examples:
+
+```bash
+make gen_operations k=invalid_committee_index
+```
+
+```bash
+make gen_operations fork=fulu
+```
+
+```bash
+make gen_operations preset=mainnet
+```
+
+```bash
+make gen_operations k=invalid_committee_index fork=fulu preset=mainnet
+```
+
+The arguments also accept comma-separated lists to specify multiple values.
+
+```bash
+make gen_operations k=invalid_committee_index,invalid_too_many_committee_bits
+```
+
+The arguments can also be used for when running all test generators.
+
+```bash
+make gen_all fork=fulu
 ```
 
 ## Developing a generator
