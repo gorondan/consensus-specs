@@ -1,5 +1,3 @@
-from build.lib.eth2spec.eipxxxx_eods.mainnet import is_valid_deposit_to_delegate_signaturefrom build.lib.eth2spec.eipxxxx_eods.mainnet import MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT
-
 # EIP-XXX_eODS -- The Beacon Chain
 
 ## Table of contents
@@ -72,12 +70,6 @@ without dynamic validator selection or delegator governance.
 |---------------------------------------|--------------------------|:------:|:----------:|
 | `MIN_DELEGATOR_WITHDRAWABILITY_DELAY` | `uint64(2**11)` (= 2048) | epochs | ~218 hours |
 
-### Delegator cycle
-
-| Name                                                  | Value                  |
-|-------------------------------------------------------|------------------------|
-| `MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT` | `uint64(2**9)` (= 512) |
-
 ## Containers
 
 ### Misc dependencies
@@ -89,16 +81,6 @@ class DepositToDelegateMessage(Container):
     pubkey: BLSPubkey
     withdrawal_credentials: Bytes32
     amount: Gwei
-```
-
-#### `DepositToDelegateData`
-
-```python
-class DepositToDelegateData(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
-    amount: Gwei
-    signature: BLSSignature  # Signing over DepositToDelegateMessage
 ```
 
 ### New containers
@@ -272,20 +254,11 @@ def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorInd
 
 ```python
 def process_pending_deposits_to_delegate(state: BeaconState) -> None:
-    current_deposit_to_delegate_index = 0
-    
     for deposit_to_delegate in state.pending_deposits_to_delegate:
-        if (current_deposit_to_delegate_index >= MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT):
-            break
-
         apply_deposit_to_delegate(state, deposit_to_delegate)
-        
-        current_deposit_to_delegate_index += 1
-    
-    state.pending_deposits_to_delegate = state.pending_deposits_to_delegate[current_deposit_to_delegate_index:]
+    state.pending_deposits_to_delegate = []
 
 ```
-
 #### New `apply_pending_deposit`
 
 ```python
