@@ -83,11 +83,12 @@ FUNCTIONS
     withdraw_from_validator
         TODO: not used
 
+    withdraw_from_delegator
+        TODO: implement
+
+    # Perks
     fast_redelegate
-        TODO: not used
+        TODO: not used, implement
 
-    early_exit_liquidity
-        TODO: not used
-
-    receive_partial_withdrawal
-        TODO: not used
+    fast_withdrawal
+        TODO: not used, implement

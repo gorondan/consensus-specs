@@ -177,14 +177,14 @@ def fast_redelegate(
     to_validator.delegators_quotas[subindex] += updated_quota
 ```
 
-### early_exit_liquidity
+### fast_withdrawal
 
 ```python
-def early_exit_liquidity(
+def fast_withdrawal(
     state: BeaconState,
     delegator_index: DelegatorIndex,
     validator_index: ValidatorIndex,
-    priority_exit_fee: Gwei
+    fast_withdrawal_fee: Gwei
 ) -> Withdrawal:
     """
     Allows a validator to receive early liquidity by borrowing undelegated balance from a delegator.
@@ -194,36 +194,16 @@ def early_exit_liquidity(
     - Delegator has sufficient undelegated balance.
     - Validator is registered and has a pending exit or reduced liquidity.
     """
-    assert state.delegators_balances[delegator_index] >= priority_exit_fee
+    assert state.delegators_balances[delegator_index] >= fast_withdrawal_fee
 
     delegator = state.delegators[delegator_index]
-    state.delegators_balances[delegator_index] -= priority_exit_fee
+    state.delegators_balances[delegator_index] -= fast_withdrawal_fee
 
     validator = state.validators[validator_index]
     return Withdrawal(
         index=state.next_withdrawal_index,
         validator_index=validator_index,
         address=validator.withdrawal_credentials,
-        amount=priority_exit_fee,
+        amount=fast_withdrawal_fee,
     )
-```
-
-### receive_partial_withdrawal
-
-```python
-def receive_partial_withdrawal(
-    state: BeaconState,
-    validator_index: ValidatorIndex,
-    amount: Gwei
-) -> None:
-    """
-    Validator-side logic to repay the delegator from its own partial withdrawal stream.
-
-    Preconditions:
-    - The validator has exited and is receiving sweepable partial withdrawals.
-    - The amount corresponds to a previous `priority_exit`.
-    """
-    # Logic assumes off-chain tracking or coordination has established repayment terms.
-    # The validator’s withdrawal mechanism (e.g., EIP-7002) triggers this on replay.
-    pass
 ```
