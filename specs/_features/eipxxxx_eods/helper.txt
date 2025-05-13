@@ -14,15 +14,9 @@ CONSTANTS
     MIN_DELEGATOR_WITHDRAWABILITY_DELAY
         min cooldown period needed before a withdrawal to wallet can be done
 
-    MAX_PER_EPOCH_DEPOSITS_TO_DELEGATE_PROCESSING_LIMIT
-        the max number of requests to delegate that can be processed per epoch
-
 CONTAINERS
     DepositToDelegateMessage
         This is the deposit to delegate message that comes from EL
-
-    DepositToDelegateData
-        TODO: remove
 
     Delegator
 
