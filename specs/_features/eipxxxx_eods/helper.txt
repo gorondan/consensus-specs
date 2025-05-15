@@ -68,9 +68,6 @@ FUNCTIONS
     compute_pending_rewards
         TODO: not used
 
-    withdraw_to_wallet
-        TODO: not used
-
     get_delegator_index
         TODO: remove, not needed
 
@@ -92,3 +89,12 @@ FUNCTIONS
 
     fast_withdrawal
         TODO: not used, implement
+
+    delegation_operations
+        DEPOSIT
+        WITHDRAW
+        DELEGATE
+        REDELEGATE
+        UNDELEGATE
+        EXIT
+        EARLY_LIQUIDITY
