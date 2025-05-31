@@ -1,0 +1,133 @@
+# Accountable safety in eODS
+
+_tl;dr;
+In this write-up we analise the possible introduction of Ethereum delegation at protocol level, in the context of
+preserving the canonical chain's financial safety, and we point that there **is** an eODS model that checks both the
+proposed functionality and the protocol's safety assumptions._
+
+## Abstract
+
+Enshrining the separation between Delegators and Operators would functionally add delegation in Ethereum, at protocol
+level. At the moment of writing, the design is still work in progress, thus, this file might change, as eODS work
+progresses.
+
+Prerequisites
+
+| eODS design notes                                  | Link                                  |
+|----------------------------------------------------|---------------------------------------|
+| Towards enshrining Delegation in Ethereum protocol | https://hackmd.io/@kboomro/rk7RTSbxgx |
+
+---
+
+## Financially accountable delegated balance
+
+In the current eODS design, delegated balance is tracked by the beacon-chain-accounting gadget, but Delegators are not
+directly slashable, slashing being applied only to delegated validators. The withdrawable balance of Delegators is,
+however, reduced if the validator they delegated to, was slashed. Same logic applies to rewards and penalties, that will
+affect delegator's withdrawable balance. This enforces accountability without introducing slashing complexity for
+non-operational participants.
+
+This design is potentially suboptimal, especially in the context of a weak subjectivity attack, due to the following
+rationale:
+
+- We assume that a rational adversary would compare value of burned stake with the value of the attack and only run the
+  attack if the burned value is overcome by the gain that can be obtained from attacking.
+- the delegated balance eventually gets destroyed if the delegated validator is slashed, so that counts as negative
+  attack efficiency (it's counted in the burned value), but it doesn't protect the protocol from the finalization of two
+  conflicting checkpoints.
+  Also, the attacker could simply use validators that were not delegated, to attack the network, or undelegate prior to
+  the attack.
+- even though it can be an efficient deterrent until the period of attack, once the attack is initiated, delegated
+  balance doesn't affect adversarial game.
+
+By cumulating delegated balance to the validator's effective balance, the delegated balance would be added as 
+[PoS weight for the validator, and counted in its rewards, penalties and slashing calculation](https://hackmd.io/ZQocZMA9RyCZNlNHPGMeRg#13-Technical-and-economic-reasons-behind-using-the-effective-balance).
+**An important safety condition in this case would be to make sure the delegated balance also becomes financially accountable
+for a certain number of epochs, due to weak subjectivity.**
+
+## Actual and Effective Balance under this eODS model
+eODS feature proposes the following beacon-chain changes, in order to manage balances (non-exclusive list):
+
+### Actual Validators balance and Actual Delegators balance
+
+- Delegators entities and their not-delegated actual balances, are added as parallel lists in `BeaconState`, alongside Validators and Validators actual balances
+
+```python
+### Modified containers
+class BeaconState(Container):
+# Registry
+validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
+balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
+...
+# Delegation additions
+delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT] #[New in EIPXXXX_eODS]
+delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT] #[New in EIPXXXX_eODS]
+delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT] #[New in EIPXXXX_eODS]
+```
+- Delegated Validators protocol objects are added as a list of `class DeleegatedValidator` instantiations, inside `BeaconState`, where 
+`DelegatedValidator` is a wrapper around existing `Validator` protocol entities, that have set their `is_operator` attribute to `True`:
+```python
+### Modified container
+class Validator(Container):
+...
+is_operator: boolean # [New in EIPXXXX_eODS]
+fee_quotient: uint64 # [New in EIPXXXX_eODS]
+```
+Each `DelegatedValidator` keep a registry of their Delegators quotas and delegated balances:
+```python
+### New container
+class DelegatedValidator(Container):
+delegated_validator: Validator
+delegated_validator_initial_balance: Gwei
+delegated_validator_quota: uint64
+delegators_quotas: List[Quota, DELEGATOR_REGISTRY_LIMIT]
+delegated_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
+total_delegated_balance: Gwei
+```
+
+### Beacon-chain-accounting protocol gadget 
+Will have the role of an enshrined accounting module that intermediates delegation state transitions during consensus-layer epoch processing. It is invoked by the protocol during consensus-layer state transitions. It will record deposits, withdrawals, and balance movements between delegators and delegated validators. 
+
+We used the following terminology, above:
+- delegators not-delegated actual balance: balance stored in `delegators_balances`. It's idle balance, not yet delegated, not considered as stake.
+- delegators delegated actual balance: balance stored in `delegated_balances`, inside each `DelegatedValidator`'s records. This balance will be cumulated with that particular validator's effective balance and when active in consensus, will be considered slashable stake.
+
+### Effective (Validators) balance
+The validator effective balance can be modified to the following form:
+```python
+def process_effective_balance_updates(state: BeaconState) -> None:
+    # Update effective balances with hysteresis
+    for index, validator in enumerate(state.validators):
+        balance = state.balances[index] + state.delegated_validators[index].total_delegated_balance # [Modified in EIPXXXX_eODS]
+        ...
+```
+## WS period calculation for this model
+
+```
+t = get_total_active_balance(state)
+    delta = get_balance_churn_limit(state)
+    epochs_for_validator_set_churn = SAFETY_DECAY * t // (2 * delta * 100)
+    return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + epochs_for_validator_set_churn
+```
+
+is equivalent to
+$n=\frac{D_0*S}{2d}$,
+
+where:
+`t = S = total active balance`
+
+`SAFETY_DECAY` = $D_0 =\frac{10}{100}$
+
+```
+exit rate = d = min(256, max(128, total_active_balance / 65536))
+```
+
+$d(S)=max(128,\frac {S}{2^{16}})$
+
+$d_{AE}(S)=min(256,d(S))$
+
+Churn limit for consolidations is set to $d_C = d(S) - d_{AE}(S)$, which preserves the WS period so that:
+$\frac{D_0*S}{2d(S)} = \frac{D_0*S}{2(d_{AE}(S)+d_C(S))}$
+
+
+ 
