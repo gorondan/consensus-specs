@@ -101,8 +101,10 @@ def process_effective_balance_updates(state: BeaconState) -> None:
         balance = state.balances[index] + state.delegated_validators[index].total_delegated_balance # [Modified in EIPXXXX_eODS]
         ...
 ```
-## WS period calculation for this model
 
+## WS period calculation for this model (Based on [Electra](https://github.com/ethereum/consensus-specs/blob/dev/specs/electra/weak-subjectivity.md))
+
+### Electra weak subjectivity period calculus (memory refresher) 
 ```
 t = get_total_active_balance(state)
     delta = get_balance_churn_limit(state)
@@ -110,21 +112,24 @@ t = get_total_active_balance(state)
     return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + epochs_for_validator_set_churn
 ```
 
-is equivalent to
+The formula in the code snippet is equivalent to
+
 $n=\frac{D_0*S}{2d}$,
 
-where:
-`t = S = total active balance`
+from [this calculation](https://notes.ethereum.org/@fradamt/maxeb-consolidation#Consolidations-and-churn-limit), where:
 
-`SAFETY_DECAY` = $D_0 =\frac{10}{100}$
+- `t` = S = total active balance (see `get_total_active_balance`)
 
-```
-exit rate = d = min(256, max(128, total_active_balance / 65536))
-```
+- `SAFETY_DECAY` = $D_0 =\frac{10}{100}$
 
-$d(S)=max(128,\frac {S}{2^{16}})$
+Post Electra, the per-epoch rate at which stake can enter and exit the system is not a fixed amount of stake, and instead depends on the total stake $S$:
 
-$d_{AE}(S)=min(256,d(S))$
+- churn rate = `delta` = `min(256, max(128, total_active_balance / 65536))`
+which is equivalent to:
+
+- $d_{AE}(S)=min(256,d(S))$, where $d(S)$ is the validator activation rate limit per epoch $d(S)=max(128,\frac {S}{2^{16}})$
+
+
 
 Churn limit for consolidations is set to $d_C = d(S) - d_{AE}(S)$, which preserves the WS period so that:
 $\frac{D_0*S}{2d(S)} = \frac{D_0*S}{2(d_{AE}(S)+d_C(S))}$
