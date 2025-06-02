@@ -180,7 +180,7 @@ The total stake in case of an WS attack becomes $S + 2D$, since the adversary wo
 
 The accountable safety equation for a Delegation, becomes:
 
-$min.quorum.intersection - total.stake = 2 * \frac{2}{3}(S+D) - (S + 2D) = \frac{1}{3} * S = \frac{1}{3} * S - \frac{2}{3}*D$,
+$min.quorum.intersection - total.stake = 2 * \frac{2}{3}(S+D) - (S + 2D) = \frac{1}{3} * S - \frac{2}{3}*D$,
 which is equivalent with the safety loss of an activation (doubled in value because there are two branches). 
 
 #### UNDELEGATE
@@ -189,31 +189,47 @@ An Undelegation of U stake from an active validator, implies withdrawing U amoun
 **Safety implications of Undelegate : An undelegation of U stake, introduces a safety loss of $\frac{2}{3} * U$, equivalent to an
 exit**, since it lowers the required voting quorum on each conflicting branch by $\frac{2}{3} * U$, just like an exit.
 
-Let's see if the math checks out:
-
 The total stake in case of an WS attack remains $S$, since all validators are still active on at least one of the two branches.
 
 The accountable safety equation for an Undelegation, becomes:
 
-$min.quorum.intersection - total.stake = 2 * \frac{2}{3}(S - U) - S  = \frac{1}{3} * S = \frac{1}{3} * S - \frac{4}{3}*U$,
+$min.quorum.intersection - total.stake = 2 * \frac{2}{3}(S - U) - S  = \frac{1}{3} * S - \frac{4}{3}*U$,
 which is equivalent with the safety loss of an exit (doubled in value because there are two branches). 
 
 #### REDELEGATE
-A Redelegation of R stake from one active validator towards another active validator, implies deducing an R amount of stake from the `source` validator's effective balance and cumulating that R stake to the `target` validator's effective balance, bypassing the . 
+A Redelegation of R stake from one active validator towards another active validator, implies deducing an R amount of stake from the `source` validator's effective balance and cumulating that R stake to the `target` validator's effective balance, bypassing the activation queue. 
 
-**Safety implications of Delegate : A delegation of D stake, introduces a safety loss of $\frac{1}{3} * D$, equivalent to an
-activation**, since it introduces stake that is free to vote on whatever it wants, and it increases the required voting quorum by $\frac{2}{3} * D$, just like an activation.
+**Safety implications of Redelegate : A Redelegation of R stake, introduces a safety loss of $R$, equivalent to an exit followed by 
+an activation**. It does not change quorum, just shifting stake from one validator to another, but the redelegated stake is free to vote on whatever it wants, without being slashed, irrespective of the votes of the `source` validator, as with an activation.
 
 Let's see if the math checks out:
 
-The total stake in case of an WS attack becomes $S + 2D$, since the adversary would need to vote on both chains.
+The total stake on both branches becomes $S + 2A$.
 
 The accountable safety equation for a Delegation, becomes:
 
-$min.quorum.intersection - total.stake = 2 * \frac{2}{3}(S+D) - (S + 2D) = \frac{1}{3} * S = \frac{1}{3} * S - \frac{2}{3}*D$,
-which is equivalent with the safety loss of an activation (doubled in value because there are two branches).
+$min.quorum.intersection (activation - exit) - total.stake (activation - exit) = 2 * \frac{2}{3} * (S + R - R) - (S + 2 R) = \frac{1}{3} * S - 2 * R$,
+which is equivalent with the safety loss of an exit plus an activation (doubled in value because there are two branches).
+
 ### Delegation churn limit
-In Electra, the Churn limit for consolidations is set to $d_C = d(S) - d_{AE}(S)$, which preserves the WS period so that:
-$\frac{D_0*S}{2d(S)} = \frac{D_0*S}{2(d_{AE}(S)+d_C(S))}$, reestablishing the symetry between the rate of limitation for exits and activations.
+
+From the analysis above, we can deduce that Delegation lifecycle - in matters of introduced safety loss - is equivalent with already existing operations, i.e. Delegate - Activation, Undelegate - Exit, Redelegate - Consolidation.  
+
+Whenever total stake overpasses $2^{24}$ ETH (`CHURN_LIMIT_QUOTIENT` $* 256$), the difference between the churn limit and the validator activation limit leaves a "per epoch weak subjectivity budget" e.g. at the moment of writing, there is a budget of 524-256 = 268 ETH /epoch, both for activations and exits, that is currently used by consolidations.
+
+Considering the blunt similarities between delegation operations and activations, exits and consolidations, we introduce the possibility of gradually replacing consolidation with delegation. 
+
+### Exit Consolidation...Enter Delegation
+
+In Electra, the Churn limit for consolidations is set to $d_C = d(S) - d_{AE}(S)$, so that $d(S) = d_{AE}(S) + d_C(S)$. 
+
+We can consider keeping the churn rate unchanged, and fitting delegation in the "budget" left from consolidation, implementing the two sequentially, with the order being determined of how far advanced consolidations are at the time when eODS gets adopted.
+Considering validator consolidation was introduced as a temporary measure, and that at the current level of stake, it could take ~18 months for all consolidation to happen, we can consider that after that somewhere on that curve we can replace consolidation with delegation.
+
+So, we could have a Delegation churn rate $d_R(S)$ of 
+$d_R = d(S) - d_{AE}(S) - d_C(S)$, which preserves the WS period imposed in Deneb, so that:
+$\frac{D_0*S}{2d(S)} = \frac{D_0*S}{2(d_{AE}(S) + d_C(S) + d_R(S))}$.
+
+
 
  
