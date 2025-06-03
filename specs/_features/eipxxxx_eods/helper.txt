@@ -91,11 +91,15 @@ FUNCTIONS
         TODO: not used, implement
 
     delegation_operations
+    --- DEPOSIT_TO_DELEGATE operations
         DEPOSIT
+        GET_FEE
+    --- DELEGATION operations
         WITHDRAW
         DELEGATE
         REDELEGATE
         UNDELEGATE
-        EXIT
+        EXIT -- remove DELEGATOR from b-c
+        ACTIVATE_OPERATOR
+    --- perks operations
         EARLY_LIQUIDITY
-        ACTIVATE_VALIDATOR_DELEGATIONS
