@@ -32,10 +32,10 @@ def compute_pending_rewards(state: BeaconState, delegator_index: DelegatorIndex,
     return reward - fee
 ```
 
-### withdraw_to_wallet
+### withdraw_from_delegator
 
 ```python
-def withdraw_to_wallet(state: BeaconState, delegator_index: DelegatorIndex) -> Withdrawal:
+def withdraw_from_delegator(state: BeaconState, delegator_index: DelegatorIndex) -> Withdrawal:
     amount = state.delegators_balances[delegator_index]
     assert amount > 0
 
