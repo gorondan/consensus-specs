@@ -1,3 +1,5 @@
+from remerkleable.basic import uint64
+
 # EIP-XXX_eODS -- The Beacon Chain
 
 ## Table of contents
@@ -52,10 +54,6 @@ without dynamic validator selection or delegator governance.
 
 ### Gwei values
 
-| Name                             | Value                                  |
-|----------------------------------|----------------------------------------|
-| `MIN_DEPOSIT_TO_DELEGATE_AMOUNT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000) |
-
 ### Domain types
 
 | Name                         | Value                      |
@@ -74,15 +72,6 @@ without dynamic validator selection or delegator governance.
 
 ### Misc dependencies
 
-#### `DepositToDelegateMessage`
-
-```python
-class DepositToDelegateMessage(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
-    amount: Gwei
-```
-
 ### New containers
 
 #### `Delegator`
@@ -91,7 +80,6 @@ class DepositToDelegateMessage(Container):
 class Delegator(Container):
     pubkey: BLSPubkey
     withdrawal_credentials: Bytes32
-    effective_delegated_balance: Gwei
     delegator_entry_epoch: Epoch
 ```
 
@@ -105,6 +93,7 @@ class DelegatedValidator(Container):
     delegators_quotas: List[Quota, DELEGATOR_REGISTRY_LIMIT]
     delegated_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
     total_delegated_balance: Gwei
+    fee_quotient: uint64
 ```
 
 #### `DepositToDelegateRequest`
@@ -152,8 +141,7 @@ class Validator(Container):
     activation_epoch: Epoch
     exit_epoch: Epoch
     withdrawable_epoch: Epoch
-    delegated: boolean # [New in EIPXXXX_eODS]
-    fee_quotient: uint64 # [New in EIPXXXX_eODS]
+    is_operator: boolean # [New in EIPXXXX_eODS]
 ```
 
 #### `BeaconState`
