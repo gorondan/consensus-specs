@@ -95,7 +95,7 @@ FUNCTIONS
         DEPOSIT
         GET_FEE
     --- DELEGATION operations
-        WITHDRAW
+        WITHDRAW_FROM_DELEGATOR
         DELEGATE
         REDELEGATE
         UNDELEGATE
