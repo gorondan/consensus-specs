@@ -50,8 +50,6 @@ without dynamic validator selection or delegator governance.
 
 ## Constants
 
-### Misc
-
 ### Execution layer triggered delegation requests
 
 | Name                               | Value            |
@@ -66,7 +64,6 @@ without dynamic validator selection or delegator governance.
 | `ACTIVATE_OPERATOR_TYPE`           | `Bytes1('0x07')` |
 | `EARLY_LIQUIDITY_TYPE`             | `Bytes1('0x07')` |
 
-### Gwei values
 
 ### Domain types
 
@@ -83,8 +80,6 @@ without dynamic validator selection or delegator governance.
 | `MIN_DELEGATOR_WITHDRAWABILITY_DELAY` | `uint64(2**11)` (= 2048) | epochs | ~218 hours |
 
 ## Containers
-
-### Misc dependencies
 
 ### New containers
 
@@ -135,7 +130,7 @@ class PendingDepositToDelegate(Container):
 
 ```python
 class DelegationOperationRequest(Container):
-    type: Bytes32
+    type: Bytes1
     source_pubkey: BLSPubkey
     target_pubkey: BLSPubkey
     withdraw_credentials: Bytes32
@@ -144,7 +139,6 @@ class DelegationOperationRequest(Container):
 ```
 
 ### Modified containers
-
 #### `ExecutionRequests`
 
 ```python
@@ -152,8 +146,7 @@ class ExecutionRequests(Container):
     deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
     withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
     consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
-    delegation_operations: List[
-        DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
+    delegation_operations: List[DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
 #### `Validator`
@@ -236,6 +229,8 @@ class BeaconState(Container):
 ## Beacon chain state transition function
 
 ### Block processing
+
+#### New `get_execution_requests_list`
 
 ```python
 def process_delegation_operation_request(state: BeaconState,
