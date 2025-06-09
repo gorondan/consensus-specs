@@ -149,7 +149,7 @@ class ExecutionRequests(Container):
     delegation_operations: List[DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
-#### `Validator`
+#### `Validator
 
 ```python
 class Validator(Container):
@@ -230,7 +230,7 @@ class BeaconState(Container):
 
 ### Block processing
 
-#### New `get_execution_requests_list`
+#### New `process_delegation_operation_request`
 
 ```python
 def process_delegation_operation_request(state: BeaconState,
