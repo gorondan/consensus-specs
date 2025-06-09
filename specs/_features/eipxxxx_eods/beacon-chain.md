@@ -54,16 +54,14 @@ without dynamic validator selection or delegator governance.
 
 | Name                               | Value            |
 |------------------------------------|------------------|
-| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE` | `Bytes1('0x00')` |
-| `WITHDRAW_REQUEST_TYPE`            | `Bytes1('0x01')` |
+| `ACTIVATE_OPERATOR_TYPE`           | `Bytes1('0x00')` |
+| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE` | `Bytes1('0x01')` |
 | `DELEGATE_REQUEST_TYPE`            | `Bytes1('0x02')` |
-| `REDELEGATE_REQUEST_TYPE`          | `Bytes1('0x03')` |
-| `UNDELEGATE_REQUEST_TYPE`          | `Bytes1('0x04')` |
+| `UNDELEGATE_REQUEST_TYPE`          | `Bytes1('0x03')` |
+| `REDELEGATE_REQUEST_TYPE`          | `Bytes1('0x04')` |
 | `WITHDRAW_FROM_DELEGATOR_TYPE`     | `Bytes1('0x05')` |
-| `EXIT_TYPE`                        | `Bytes1('0x06')` |
-| `ACTIVATE_OPERATOR_TYPE`           | `Bytes1('0x07')` |
-| `EARLY_LIQUIDITY_TYPE`             | `Bytes1('0x07')` |
-
+| `EARLY_LIQUIDITY_TYPE`             | `Bytes1('0x06')` |
+| `EXIT_TYPE`                        | `Bytes1('0x07')` |
 
 ### Domain types
 
@@ -139,6 +137,7 @@ class DelegationOperationRequest(Container):
 ```
 
 ### Modified containers
+
 #### `ExecutionRequests`
 
 ```python
@@ -146,7 +145,8 @@ class ExecutionRequests(Container):
     deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
     withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
     consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
-    delegation_operations: List[DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
+    delegation_operations: List[
+        DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
 #### `Validator
@@ -223,7 +223,8 @@ class BeaconState(Container):
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_deposits_to_delegate: List[
+        PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
 ```
 
 ## Beacon chain state transition function
