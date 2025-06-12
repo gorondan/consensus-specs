@@ -1,4 +1,4 @@
-from build.lib.eth2spec.fulu.mainnet import ExecutionAddressfrom build.lib.eth2spec.fulu.mainnet import FAR_FUTURE_EPOCHfrom threading import activeCountfrom remerkleable.basic import uint64
+from build.lib.eth2spec.fulu.mainnet import MAX_EFFECTIVE_BALANCEfrom mypy.checkexpr import is_operator_methodfrom build.lib.eth2spec.fulu.mainnet import BeaconStatefrom build.lib.eth2spec.fulu.mainnet import BeaconBlockBodyfrom build.lib.eth2spec.fulu.mainnet import ExecutionAddressfrom build.lib.eth2spec.fulu.mainnet import FAR_FUTURE_EPOCHfrom threading import activeCountfrom remerkleable.basic import uint64
 
 # EIP-XXX_eODS -- The Beacon Chain
 
@@ -139,9 +139,10 @@ class PendingDepositToDelegate(Container):
 
 ```python
 class PendingDelegateRequest(Container):
-  pubkey: BLSPubkey
-  signature: BLSSignature
+  execution_address:ExecutionAddress
+  validator_pubkey: BLSPubkey
   amount: Gwei
+  slot: Slot
 ```
 
 #### `PendingUndelegateRequest`
@@ -284,17 +285,16 @@ def process_delegation_operation_request(state: BeaconState,
     
     elif delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
         state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
-            pubkey=delegation_operation_request.source_pubkey,
-            withdrawal_credentials=delegation_operation_request.withdrawal_credentials,
-            amount=delegation_operation_request.amount,
-            signature=delegation_operation_request.signature
+            execution_address = delegation_operation_request.execution_address,
+            amount=delegation_operation_request.amount
         ))
         
     elif delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
       state.pending_delegate.append(PendingDelegateRequest(
-        pubkey=delegation_operation_request.pubkey,
-        signature=delegation_operation_request.signature,
-        amount=delegation_operation_request.amount
+        validator_pubkey=delegation_operation_request.target_pubkey,
+        execution_address = delegation_operation_request.execution_address,
+        amount=delegation_operation_request.amount,
+        slot=state.slot
       ))
 
     elif delegation_operation_request.type == UNDELEGATE_REQUEST_TYPE:
@@ -364,14 +364,19 @@ def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorInd
 ```python
 def process_pending_deposits_to_delegate(state: BeaconState) -> None:
     for deposit_to_delegate in state.pending_deposits_to_delegate:
-        apply_deposit_to_delegate(state, deposit_to_delegate)
+      delegators_execution_addresses = [d.execution_address for d in state.delegators]
+      if deposit_to_delegate.execution_address not in delegators_execution_addresses:
+        delegator_index = register_new_delegator(state, deposit_to_delegate.execution_address)
+      else:
+        delegator_index = DelegatorIndex(delegators_execution_addresses.index(deposit_to_delegate.execution_address))
+      increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
     state.pending_deposits_to_delegate = []
 ```
 
-#### New `process_pending_activate_operator`
+#### New `process_pending_activate_operators`
 
 ```python
-def process_pending_activate_operator(state: BeaconState) -> None:
+def process_pending_activate_operators(state: BeaconState) -> None:
     for pending_activation in state.pending_activate_operator:
       validator_pubkeys = [v.pubkey for v in state.validators]
       # Verify pubkey exists
@@ -406,18 +411,26 @@ def process_pending_activate_operator(state: BeaconState) -> None:
 
     state.pending_activate_operator = []
 ```
-
-#### New `apply_pending_deposit`
-
+#### New `process_pending_delegations`
 ```python
-def apply_deposit_to_delegate(state: BeaconState, deposit_to_delegate: PendingDepositToDelegate) -> None:
-   
-    delegators_execution_addresses = [d.execution_address for d in state.delegators]
-    if deposit_to_delegate.execution_address not in delegators_execution_addresses:
-        delegator_index = register_new_delegator(state, deposit_to_delegate.execution_address)
-    else:
-        delegator_index = DelegatorIndex(delegators_execution_addresses.index(deposit_to_delegate.execution_address))
-    increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
+def process_pending_delegations(state: BeaconState) -> None:
+  - calculate avalilable delegation churn
+    - for each pending delegation in state.pending delegation:
+        - check if the pending delegation slot has been finalized
+        - check if delegator source address matches request source address
+            actually this is a lookup by source address
+        - check if delegator has enough balance to delegate
+        - check if target validator: 
+                    exists, 
+                    is_operator,
+                    active & not exiting,
+                    not slashed,
+                    has effective balance less than MAX_EFFECTIVE_BALANCE,
+        - churn check and calculate delegable ammount
+        - delegate_to_validator(BCA)      
+        - update processing queue
+        - update remaining churn for next epoch
+
 ```
 
 #### Modified `process_epoch`
@@ -432,8 +445,9 @@ def process_epoch(state: BeaconState) -> None:
     process_eth1_data_reset(state)
     process_pending_deposits(state)  # [New in Electra:EIP7251]
     process_pending_consolidations(state)  # [New in Electra:EIP7251]
-    process_pending_activate_operator(state)
+    process_pending_activate_operators(state)
     process_pending_deposits_to_delegate(state)  # [New in EIPXXXX_eODS]
+    process_pending_delegations(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
