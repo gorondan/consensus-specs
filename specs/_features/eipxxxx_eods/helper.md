@@ -1,6 +1,6 @@
 CONSTANTS
-    MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD
-        how many deposit to delegate requests are in a block (when then arrive from EL to CL)
+MAX_DEPOSIT_TO_DELEGATE_REQUESTS_PER_PAYLOAD
+how many deposit to delegate requests are in a block (when then arrive from EL to CL)
 
     DELEGATOR_REGISTRY_LIMIT
         max len on the list that holds the delegators in BC
@@ -15,8 +15,8 @@ CONSTANTS
         min cooldown period needed before a withdrawal to wallet can be done
 
 CONTAINERS
-    DepositToDelegateMessage
-        This is the deposit to delegate message that comes from EL
+DepositToDelegateMessage
+This is the deposit to delegate message that comes from EL
 
     Delegator
 
@@ -38,8 +38,9 @@ CONTAINERS
     BeaconState (modified)
 
 FUNCTIONS
-    process_deposit_to_delegate_request
-        It takes every DepositToDelegateRequest, converts it into a PendingDepositToDelegate and appends it to the queue (pending_deposits_to_delegate, in BC)
+process_deposit_to_delegate_request
+It takes every DepositToDelegateRequest, converts it into a PendingDepositToDelegate and appends it to the queue (
+pending_deposits_to_delegate, in BC)
 
     increase_delegator_balance
         Increases the delegator balance. It is used my many operations.
@@ -91,6 +92,18 @@ FUNCTIONS
         TODO: not used, implement
 
     delegation_operations
+
+| Name                                   | Churnable |
+|----------------------------------------|-----------|
+| `ACTIVATE_OPERATOR_REQUEST_TYPE`       | NO        |
+| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE`     | NO        |
+| `DELEGATE_REQUEST_TYPE`                | YES       |
+| `UNDELEGATE_REQUEST_TYPE`              | YES       |
+| `REDELEGATE_REQUEST_TYPE`              | YES       |
+| `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | NO        |
+| `EARLY_LIQUIDITY_REQUEST_TYPE`         | NO        |
+| `EXIT_REQUEST_TYPE`                    | NO        |
+
     --- DEPOSIT_TO_DELEGATE operations
         DEPOSIT
         GET_FEE
