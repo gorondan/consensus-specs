@@ -1,4 +1,4 @@
-from build.lib.eth2spec.fulu.mainnet import FAR_FUTURE_EPOCHfrom threading import activeCountfrom remerkleable.basic import uint64
+from build.lib.eth2spec.fulu.mainnet import ExecutionAddressfrom build.lib.eth2spec.fulu.mainnet import FAR_FUTURE_EPOCHfrom threading import activeCountfrom remerkleable.basic import uint64
 
 # EIP-XXX_eODS -- The Beacon Chain
 
@@ -91,8 +91,7 @@ without dynamic validator selection or delegator governance.
 
 ```python
 class Delegator(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
+    execution_address: ExecutionAddress
     delegator_entry_epoch: Epoch
 ```
 
@@ -132,10 +131,8 @@ class PendingActivateOperator(Container):
 
 ```python
 class PendingDepositToDelegate(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
+    execution_address:ExecutionAddress
     amount: Gwei
-    signature: BLSSignature
 ```
 
 #### `PendingDelegateRequest`
@@ -414,20 +411,12 @@ def process_pending_activate_operator(state: BeaconState) -> None:
 
 ```python
 def apply_deposit_to_delegate(state: BeaconState, deposit_to_delegate: PendingDepositToDelegate) -> None:
-    if not is_valid_deposit_to_delegate_signature(
-            deposit_to_delegate.pubkey,
-            deposit_to_delegate.withdrawal_credentials,
-            deposit_to_delegate.amount,
-            deposit_to_delegate.signature
-    ):
-        return
-
-    delegators_pubkeys = [d.pubkey for d in state.delegators]
-    if deposit_to_delegate.pubkey not in delegators_pubkeys:
-        delegator_index = register_new_delegator(state, deposit_to_delegate.pubkey,
-                                                 deposit_to_delegate.withdrawal_credentials)
+   
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    if deposit_to_delegate.execution_address not in delegators_execution_addresses:
+        delegator_index = register_new_delegator(state, deposit_to_delegate.execution_address)
     else:
-        delegator_index = DelegatorIndex(delegators_pubkeys.index(deposit_to_delegate.pubkey))
+        delegator_index = DelegatorIndex(delegators_execution_addresses.index(deposit_to_delegate.execution_address))
     increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
 ```
 

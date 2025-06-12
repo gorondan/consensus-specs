@@ -61,11 +61,9 @@ def get_delegator_index(state: BeaconState, pubkey: BLSPubkey) -> Optional[Deleg
             return DelegatorIndex(i)
     return None
 
-def register_new_delegator(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32) -> DelegatorIndex:
+def register_new_delegator(state: BeaconState, execution_address: ExecutionAddress) -> DelegatorIndex:
     delegator = Delegator(
-        pubkey=pubkey,
-        withdrawal_credentials=withdrawal_credentials,
-        effective_delegated_balance=Gwei(0),
+        execution_address=execution_address,
         delegator_entry_epoch=compute_epoch_at_slot(state.slot),
     )
     state.delegators.append(delegator)
