@@ -1,4 +1,4 @@
-from remerkleable.basic import uint64
+from build.lib.eth2spec.fulu.mainnet import FAR_FUTURE_EPOCHfrom threading import activeCountfrom remerkleable.basic import uint64
 
 # EIP-XXX_eODS -- The Beacon Chain
 
@@ -50,7 +50,13 @@ without dynamic validator selection or delegator governance.
 
 ## Constants
 
-### Execution layer triggered delegation requests types
+### Execution layer triggered requests
+
+| Name                                | Value            |
+|-------------------------------------|------------------|
+| `DELEGATION_OPERATION_REQUEST_TYPE` | `Bytes1('0x03')` |
+
+### Execution layer triggered delegation requests
 
 | Name                                   | Value            |
 |----------------------------------------|------------------|
@@ -112,15 +118,15 @@ class DelegationOperationRequest(Container):
     withdraw_credentials: Bytes32
     signature: BLSSignature
     amount: Gwei
+    source_address: ExecutionAddress
 ```
 
 #### `PendingActivateOperator`
 
 ```python
 class PendingActivateOperator(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
-    signature: BLSSignature
+    validator_pubkey: BLSPubkey
+    source_address: ExecutionAddress
 ```
 #### `PendingDepositToDelegate`
 
@@ -275,9 +281,8 @@ def process_delegation_operation_request(state: BeaconState,
    
     if delegation_operation_request.type == ACTIVATE_OPERATOR_REQUEST_TYPE:
       state.pending_activate_operator.append(PendingActivateOperator(
-          pubkey=delegation_operation_request.source_pubkey,
-          withdrawal_credentials=delegation_operation_request.withdrawal_credentials,
-          signature=delegation_operation_request.signature
+          validator_pubkey=delegation_operation_request.target_pubkey,
+          source_address=delegation_operation_request.source_address
       ))
     
     elif delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
@@ -364,7 +369,45 @@ def process_pending_deposits_to_delegate(state: BeaconState) -> None:
     for deposit_to_delegate in state.pending_deposits_to_delegate:
         apply_deposit_to_delegate(state, deposit_to_delegate)
     state.pending_deposits_to_delegate = []
+```
 
+#### New `process_pending_activate_operator`
+
+```python
+def process_pending_activate_operator(state: BeaconState) -> None:
+    for pending_activation in state.pending_activate_operator:
+      validator_pubkeys = [v.pubkey for v in state.validators]
+      # Verify pubkey exists
+      request_pubkey = pending_activation.validator_pubkey
+      if request_pubkey not in validator_pubkeys:
+        return
+      index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
+      validator = state.validators[index]
+
+      # Ensure the validator is not already an operator
+      if validator.is_operator:
+        return
+      
+      # Verify withdrawal credentials
+      has_correct_credential = has_compounding_withdrawal_credential(validator)
+      is_correct_source_address = (
+              validator.withdrawal_credentials[12:] == pending_activation.source_address
+      )
+      if not (has_correct_credential and is_correct_source_address):
+        return
+      # Verify the validator is active
+      if not is_active_validator(validator, get_current_epoch(state)):
+        return
+      # Verify exit has not been initiated
+      if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        return
+      # Ensure the validator is not slashed
+      if validator.slashed:
+        return
+   
+      validator.is_operator = True
+
+    state.pending_activate_operator = []
 ```
 
 #### New `apply_pending_deposit`
@@ -400,6 +443,7 @@ def process_epoch(state: BeaconState) -> None:
     process_eth1_data_reset(state)
     process_pending_deposits(state)  # [New in Electra:EIP7251]
     process_pending_consolidations(state)  # [New in Electra:EIP7251]
+    process_pending_activate_operator(state)
     process_pending_deposits_to_delegate(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)

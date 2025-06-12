@@ -9,6 +9,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
     deposits = []
     withdrawals = []
     consolidations = []
+    delegation_operations = []
 
     request_types = [
         DEPOSIT_REQUEST_TYPE,
