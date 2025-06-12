@@ -150,10 +150,10 @@ class PendingUndelegateRequest(Container):
   amount: Gwei
 ```
 
-#### `PendingUndelegateRequest`
+#### `PendingRedelegateRequest`
 
 ```python
-class PendingUndelegateRequest(Container):
+class PendingRedelegateRequest(Container):
   source_pubkey: BLSPubkey
   target_pubkey: BLSPubkey
   signature: BLSSignature
@@ -181,7 +181,7 @@ class ExecutionRequests(Container):
     delegation_operations: List[DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
-#### `Validator
+#### `Validator`
 
 ```python
 class Validator(Container):
@@ -260,6 +260,7 @@ class BeaconState(Container):
     pending_delegate: List[PendingDelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_undelegate: List[PendingUndelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_redelegate: List[PendingRedelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_withdraw_from_delegator: List[PendingWithdrawFromDelegatorRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
 ```
 
 ## Beacon chain state transition function
@@ -279,7 +280,7 @@ def process_delegation_operation_request(state: BeaconState,
           signature=delegation_operation_request.signature
       ))
     
-    if delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
+    elif delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
         state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
             pubkey=delegation_operation_request.source_pubkey,
             withdrawal_credentials=delegation_operation_request.withdrawal_credentials,
@@ -287,21 +288,21 @@ def process_delegation_operation_request(state: BeaconState,
             signature=delegation_operation_request.signature
         ))
         
-    if delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
+    elif delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
       state.pending_delegate.append(PendingDelegateRequest(
         pubkey=delegation_operation_request.pubkey,
         signature=delegation_operation_request.signature,
         amount=delegation_operation_request.amount
       ))
 
-    if delegation_operation_request.type == UNDELEGATE_REQUEST_TYPE:
+    elif delegation_operation_request.type == UNDELEGATE_REQUEST_TYPE:
       state.pending_undelegate.append(PendingUndelegateRequest(
         pubkey=delegation_operation_request.pubkey,
         signature=delegation_operation_request.signature,
         amount=delegation_operation_request.amount
       ))
         
-    if delegation_operation_request.type == REDELEGATE_REQUEST_TYPE:
+    elif delegation_operation_request.type == REDELEGATE_REQUEST_TYPE:
       state.pending_redelegate.append(PendingRedelegateRequest(
         source_pubkey=delegation_operation_request.source_pubkey,
         target_pubkey=delegation_operation_request.target_pubkey,
@@ -309,7 +310,7 @@ def process_delegation_operation_request(state: BeaconState,
         amount=delegation_operation_request.amount
       ))
         
-    if delegation_operation_request.type == WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE:
+    elif delegation_operation_request.type == WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE:
       state.pending_withdraw_from_delegator.append(PendingWithdrawFromDelegatorRequest(
         source_pubkey=delegation_operation_request.source_pubkey,
         target_pubkey=delegation_operation_request.target_pubkey,
