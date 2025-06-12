@@ -50,18 +50,18 @@ without dynamic validator selection or delegator governance.
 
 ## Constants
 
-### Execution layer triggered delegation requests
+### Execution layer triggered delegation requests types
 
-| Name                               | Value            |
-|------------------------------------|------------------|
-| `ACTIVATE_OPERATOR_TYPE`           | `Bytes1('0x00')` |
-| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE` | `Bytes1('0x01')` |
-| `DELEGATE_REQUEST_TYPE`            | `Bytes1('0x02')` |
-| `UNDELEGATE_REQUEST_TYPE`          | `Bytes1('0x03')` |
-| `REDELEGATE_REQUEST_TYPE`          | `Bytes1('0x04')` |
-| `WITHDRAW_FROM_DELEGATOR_TYPE`     | `Bytes1('0x05')` |
-| `EARLY_LIQUIDITY_TYPE`             | `Bytes1('0x06')` |
-| `EXIT_TYPE`                        | `Bytes1('0x07')` |
+| Name                                   | Value            |
+|----------------------------------------|------------------|
+| `ACTIVATE_OPERATOR_REQUEST_TYPE`       | `Bytes1('0x00')` |
+| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE`     | `Bytes1('0x01')` |
+| `DELEGATE_REQUEST_TYPE`                | `Bytes1('0x02')` |
+| `UNDELEGATE_REQUEST_TYPE`              | `Bytes1('0x03')` |
+| `REDELEGATE_REQUEST_TYPE`              | `Bytes1('0x04')` |
+| `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | `Bytes1('0x05')` |
+| `EARLY_LIQUIDITY_REQUEST_TYPE`         | `Bytes1('0x06')` |
+| `EXIT_REQUEST_TYPE`                    | `Bytes1('0x07')` |
 
 ### Domain types
 
