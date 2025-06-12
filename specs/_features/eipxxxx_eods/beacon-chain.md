@@ -102,38 +102,6 @@ class DelegatedValidator(Container):
     total_delegated_balance: Gwei
     fee_quotient: uint64
 ```
-
-#### `DepositToDelegateRequest`
-
-```python
-class DepositToDelegateRequest(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
-    amount: Gwei
-    signature: BLSSignature
-    index: uint64
-```
-
-#### `PendingActivateOperator`
-
-```python
-class PendingActivateOperator(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
-    amount: Gwei
-    signature: BLSSignature
-```
-
-#### `PendingDepositToDelegate`
-
-```python
-class PendingDepositToDelegate(Container):
-    pubkey: BLSPubkey
-    withdrawal_credentials: Bytes32
-    amount: Gwei
-    signature: BLSSignature
-```
-
 #### `DelegationOperationRequest`
 
 ```python
@@ -146,6 +114,61 @@ class DelegationOperationRequest(Container):
     amount: Gwei
 ```
 
+#### `PendingActivateOperator`
+
+```python
+class PendingActivateOperator(Container):
+    pubkey: BLSPubkey
+    withdrawal_credentials: Bytes32
+    signature: BLSSignature
+```
+#### `PendingDepositToDelegate`
+
+```python
+class PendingDepositToDelegate(Container):
+    pubkey: BLSPubkey
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    signature: BLSSignature
+```
+
+#### `PendingDelegateRequest`
+
+```python
+class PendingDelegateRequest(Container):
+  pubkey: BLSPubkey
+  signature: BLSSignature
+  amount: Gwei
+```
+
+#### `PendingUndelegateRequest`
+
+```python
+class PendingUndelegateRequest(Container):
+  pubkey: BLSPubkey
+  signature: BLSSignature
+  amount: Gwei
+```
+
+#### `PendingUndelegateRequest`
+
+```python
+class PendingUndelegateRequest(Container):
+  source_pubkey: BLSPubkey
+  target_pubkey: BLSPubkey
+  signature: BLSSignature
+  amount: Gwei
+```
+
+#### `PendingWithdrawFromDelegatorRequest`
+
+```python
+class PendingWithdrawFromDelegatorRequest(Container):
+  pubkey: BLSPubkey
+  signature: BLSSignature
+  amount: Gwei
+```
+
 ### Modified containers
 
 #### `ExecutionRequests`
@@ -155,8 +178,7 @@ class ExecutionRequests(Container):
     deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
     withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
     consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
-    delegation_operations: List[
-        DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
+    delegation_operations: List[DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
 #### `Validator
@@ -233,8 +255,11 @@ class BeaconState(Container):
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_activate_operator: List[PendingActivateOperator, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_delegate: List[PendingDelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_undelegate: List[PendingUndelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_redelegate: List[PendingRedelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
 ```
 
 ## Beacon chain state transition function
@@ -246,7 +271,14 @@ class BeaconState(Container):
 ```python
 def process_delegation_operation_request(state: BeaconState,
                                          delegation_operation_request: DelegationOperationRequest) -> None:
-    # Create pending delegation operation requests
+   
+    if delegation_operation_request.type == ACTIVATE_OPERATOR_REQUEST_TYPE:
+      state.pending_activate_operator.append(PendingActivateOperator(
+          pubkey=delegation_operation_request.source_pubkey,
+          withdrawal_credentials=delegation_operation_request.withdrawal_credentials,
+          signature=delegation_operation_request.signature
+      ))
+    
     if delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
         state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
             pubkey=delegation_operation_request.source_pubkey,
@@ -254,6 +286,36 @@ def process_delegation_operation_request(state: BeaconState,
             amount=delegation_operation_request.amount,
             signature=delegation_operation_request.signature
         ))
+        
+    if delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
+      state.pending_delegate.append(PendingDelegateRequest(
+        pubkey=delegation_operation_request.pubkey,
+        signature=delegation_operation_request.signature,
+        amount=delegation_operation_request.amount
+      ))
+
+    if delegation_operation_request.type == UNDELEGATE_REQUEST_TYPE:
+      state.pending_undelegate.append(PendingUndelegateRequest(
+        pubkey=delegation_operation_request.pubkey,
+        signature=delegation_operation_request.signature,
+        amount=delegation_operation_request.amount
+      ))
+        
+    if delegation_operation_request.type == REDELEGATE_REQUEST_TYPE:
+      state.pending_redelegate.append(PendingRedelegateRequest(
+        source_pubkey=delegation_operation_request.source_pubkey,
+        target_pubkey=delegation_operation_request.target_pubkey,
+        signature=delegation_operation_request.signature,
+        amount=delegation_operation_request.amount
+      ))
+        
+    if delegation_operation_request.type == WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE:
+      state.pending_withdraw_from_delegator.append(PendingWithdrawFromDelegatorRequest(
+        source_pubkey=delegation_operation_request.source_pubkey,
+        target_pubkey=delegation_operation_request.target_pubkey,
+        signature=delegation_operation_request.signature,
+        amount=delegation_operation_request.amount
+      )) 
 ```
 
 #### Execution payload
