@@ -247,6 +247,7 @@ class BeaconState(Container):
     historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
     deposit_requests_start_index: uint64  # [New in Electra:EIP6110]
     deposit_balance_to_consume: Gwei  # [New in Electra:EIP7251]
+    delegated_balance_to_consume: Gwei  # [New in EIPXXXX_eODS]
     exit_balance_to_consume: Gwei  # [New in Electra:EIP7251]
     earliest_exit_epoch: Epoch  # [New in Electra:EIP7251]
     consolidation_balance_to_consume: Gwei  # [New in Electra:EIP7251]
@@ -259,12 +260,12 @@ class BeaconState(Container):
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_activate_operator: List[PendingActivateOperator, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_operator_activations: List[PendingActivateOperator, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_delegate: List[PendingDelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_undelegate: List[PendingUndelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_redelegate: List[PendingRedelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_withdraw_from_delegator: List[PendingWithdrawFromDelegatorRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_delegations: List[PendingDelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_undelegations: List[PendingUndelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_redelegations: List[PendingRedelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_withdrawals_from_delegators: List[PendingWithdrawFromDelegatorRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
 ```
 
 ## Beacon chain state transition function
@@ -290,7 +291,7 @@ def process_delegation_operation_request(state: BeaconState,
         ))
         
     elif delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
-      state.pending_delegate.append(PendingDelegateRequest(
+      state.pending_delegations.append(PendingDelegateRequest(
         validator_pubkey=delegation_operation_request.target_pubkey,
         execution_address = delegation_operation_request.execution_address,
         amount=delegation_operation_request.amount,
@@ -414,24 +415,46 @@ def process_pending_activate_operators(state: BeaconState) -> None:
 #### New `process_pending_delegations`
 ```python
 def process_pending_delegations(state: BeaconState) -> None:
-  - calculate avalilable delegation churn
-    - for each pending delegation in state.pending delegation:
-        - check if the pending delegation slot has been finalized
-        - check if delegator source address matches request source address
-            actually this is a lookup by source address
-        - check if delegator has enough balance to delegate
-        - check if target validator: 
-                    exists, 
-                    is_operator,
-                    active & not exiting,
-                    not slashed,
-                    has effective balance less than MAX_EFFECTIVE_BALANCE,
-        - churn check and calculate delegable ammount
-        - delegate_to_validator(BCA)      
-        - update processing queue
-        - update remaining churn for next epoch
-
+    next_epoch = Epoch(get_current_epoch(state) + 1)
+    available_for_processing = state.delegated_balance_to_consume + get_activation_exit_churn_limit(state)
+    processed_amount = 0
+    next_delegation_index = 0
+    delegations_to_postpone = []
+    is_churn_limit_reached = False
+    finalized_slot = compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
+    
+    for delegation in state.pending_delegations:
+        if delegation.slot > finalized_slot:
+            break
+        
+        delegators_execution_addresses = [d.execution_address for d in state.delegators]
+        if deposit_to_delegate.execution_address in delegators_execution_addresses:
+            # check if delegators_balances[DelegatorIndex(delegator with the source address)] > amount 
+            else:
+            break
+        else:
+            break
+        
+        
+    
+        
 ```
+  # - calculate avalilable delegation churn
+  #   - for each pending delegation in state.pending delegation:
+  #       - check if the pending delegation slot has been finalized
+  #       - check if delegator source address matches request source address
+  #           actually this is a lookup by source address
+  #       - check if delegator has enough balance to delegate
+  #       - check if target validator: 
+  #                   exists, 
+  #                   is_operator,
+  #                   active & not exiting,
+  #                   not slashed,
+  #                   has effective balance less than MAX_EFFECTIVE_BALANCE,
+  #       - churn check and calculate delegable ammount
+  #       - delegate_to_validator(BCA)      
+  #       - update processing queue
+  #       - update remaining churn for next epoch
 
 #### Modified `process_epoch`
 
