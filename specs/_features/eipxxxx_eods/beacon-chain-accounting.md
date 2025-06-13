@@ -1,3 +1,5 @@
+from eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
+
 # EIP-XXX_eODS -- Beacon Chain Accounting
 
 ## Introduction
@@ -79,19 +81,14 @@ This section defines advanced delegator logic used in dynamic re-delegation and 
 ### delegate_to_validator
 
 ```python
-def delegate_to_validator(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, validator_index: ValidatorIndex, amount: Gwei) -> None:
-    assert amount > 0
-    assert validator_index < len(state.delegated_validators)
-
+def delegate_to_validator(state: BeaconState, delegated_index:DelegatorIndex, validator_index: ValidatorIndex, delegated_amount: Gwei) -> None:
+    
+    
+    
+    
+    
     delegated_validator = state.delegated_validators[validator_index]
     validator_balance = state.balances[validator_index]
-
-    delegator_index = get_delegator_index(state, pubkey)
-    if delegator_index is None:
-        delegator_index = register_new_delegator(state, pubkey, withdrawal_credentials)
-
-    assert state.delegators_balances[delegator_index] >= amount
-    # balance deduction is already handled in deposit_to_delegator_balance
 
     delegator = state.delegators[delegator_index]
     delegator.effective_delegated_balance += amount

@@ -1,5 +1,3 @@
-from build.lib.eth2spec.fulu.mainnet import MAX_EFFECTIVE_BALANCEfrom mypy.checkexpr import is_operator_methodfrom build.lib.eth2spec.fulu.mainnet import BeaconStatefrom build.lib.eth2spec.fulu.mainnet import BeaconBlockBodyfrom build.lib.eth2spec.fulu.mainnet import ExecutionAddressfrom build.lib.eth2spec.fulu.mainnet import FAR_FUTURE_EPOCHfrom threading import activeCountfrom remerkleable.basic import uint64
-
 # EIP-XXX_eODS -- The Beacon Chain
 
 ## Table of contents
@@ -247,11 +245,10 @@ class BeaconState(Container):
     historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
     deposit_requests_start_index: uint64  # [New in Electra:EIP6110]
     deposit_balance_to_consume: Gwei  # [New in Electra:EIP7251]
-    delegated_balance_to_consume: Gwei  # [New in EIPXXXX_eODS]
     exit_balance_to_consume: Gwei  # [New in Electra:EIP7251]
     earliest_exit_epoch: Epoch  # [New in Electra:EIP7251]
     consolidation_balance_to_consume: Gwei  # [New in Electra:EIP7251]
-    earliest_consolidation_epoch: Epoch  # [New in Electra:EIP7251]
+    earliest_consolidationavailable_epoch: Epoch  # [New in Electra:EIP7251]
     pending_deposits: List[PendingDeposit, PENDING_DEPOSITS_LIMIT]  # [New in Electra:EIP7251]
     # [New in Electra:EIP7251]
     pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
@@ -384,8 +381,8 @@ def process_pending_activate_operators(state: BeaconState) -> None:
       request_pubkey = pending_activation.validator_pubkey
       if request_pubkey not in validator_pubkeys:
         return
-      index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
-      validator = state.validators[index]
+      validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
+      validator = state.validators[validator_index]
 
       # Ensure the validator is not already an operator
       if validator.is_operator:
@@ -410,51 +407,117 @@ def process_pending_activate_operators(state: BeaconState) -> None:
    
       validator.is_operator = True
 
+
     state.pending_activate_operator = []
 ```
 #### New `process_pending_delegations`
+
 ```python
 def process_pending_delegations(state: BeaconState) -> None:
     next_epoch = Epoch(get_current_epoch(state) + 1)
-    available_for_processing = state.delegated_balance_to_consume + get_activation_exit_churn_limit(state)
+    available_for_processing = get_activation_exit_churn_limit(state)
     processed_amount = 0
-    next_delegation_index = 0
     delegations_to_postpone = []
-    is_churn_limit_reached = False
     finalized_slot = compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
     
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    validator_pubkeys = [v.pubkey for v in state.validators]
+        
     for delegation in state.pending_delegations:
+        delegated_amount = 0
+        has_delegator = False
+        has_validator = False
+
+        delegator_index = delegators_execution_addresses.index(delegation.execution_address)
+
+        if delegator_index:
+          has_delegator = True
+
+        validator_index = validator_pubkeys.index(delegation.validator_pubkey)
+
+        if validator_index:
+          has_validator = True
+
+        if not has_delegator or not has_validator:
+          break  
+            
+
+        # here we have delegator and validator
+
+        if state.delegators_balance[delegator_index] < delegation.amount:
+          break
+
+        validator = state.validators[validator_index]
+        
+        if not is_validator_delegable(validator):
+          break
+        
         if delegation.slot > finalized_slot:
+            delegations_to_postpone.append(delegation)
             break
         
-        delegators_execution_addresses = [d.execution_address for d in state.delegators]
-        if deposit_to_delegate.execution_address in delegators_execution_addresses:
-            # check if delegators_balances[DelegatorIndex(delegator with the source address)] > amount 
-            else:
+        # we can process the entire amount
+        if available_for_processing >= processed_amount + delegation.amount:
+          delegated_amount = delegation.amount
+          
+        # we can process a partial amount  
+        elif available_for_processing < processed_amount:
+          delegated_amount = available_for_processing - processed_amount 
+          
+        # nothing left in churn  
+        else: 
+            delegations_to_postpone.append(delegation)
             break
-        else:
-            break
+            
+        processed_amount += delegated_amount
         
+        # here we decrement the delegators available balance
+        apply_pending_delegation(state, delegator_index, validator_index, delegated_amount)
         
-    
-        
+    state.pending_delegations = delegations_to_postpone
+
 ```
-  # - calculate avalilable delegation churn
+  # - calculate available delegation churn
   #   - for each pending delegation in state.pending delegation:
   #       - check if the pending delegation slot has been finalized
   #       - check if delegator source address matches request source address
   #           actually this is a lookup by source address
   #       - check if delegator has enough balance to delegate
-  #       - check if target validator: 
-  #                   exists, 
+  #       - check if target validator:
   #                   is_operator,
   #                   active & not exiting,
   #                   not slashed,
   #                   has effective balance less than MAX_EFFECTIVE_BALANCE,
-  #       - churn check and calculate delegable ammount
+  #       - churn check and calculate delegable amount
   #       - delegate_to_validator(BCA)      
-  #       - update processing queue
-  #       - update remaining churn for next epoch
+#### New `apply_pending_delegation`
+```python
+def apply_pending_delegation:
+    delegate_to_validator(state, delegator_index, validator_index, delegated_amount)
+```
+
+  
+#### New `is_validator_delegable`
+
+```python
+def is_validator_delegable(validator: Validator) -> boolean:
+    next_epoch = Epoch(get_current_epoch(state) + 1)
+    
+    if not validator:
+        return False
+    if validator.is_operator:
+        return False
+    if validator.exit_epoch < FAR_FUTURE_EPOCH:
+      return False
+    if validator.withdrawable_epoch < next_epoch:
+      return False
+    if validator.slashed:
+      return False
+    if validator.effective_balance > MAX_EFFECTIVE_BALANCE
+      return False
+    
+    return True
+```
 
 #### Modified `process_epoch`
 
