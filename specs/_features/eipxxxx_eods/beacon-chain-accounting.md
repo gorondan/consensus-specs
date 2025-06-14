@@ -1,4 +1,4 @@
-from eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
+from build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
 
 # EIP-XXX_eODS -- Beacon Chain Accounting
 
@@ -10,96 +10,35 @@ enshrined delegation balances, withdrawal processing, and reward preview computa
 
 ## Delegation Lifecycle Functions
 
-### deposit_to_delegator_balance
-
-```python
-def deposit_to_delegator_balance(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: Gwei) -> None:
-    delegator_index = get_delegator_index(state, pubkey)
-    if delegator_index is None:
-        delegator_index = register_new_delegator(state, pubkey, withdrawal_credentials)
-    state.delegators_balances[delegator_index] += amount
-```
-
-### compute_pending_rewards
-
-```python
-def compute_pending_rewards(state: BeaconState, delegator_index: DelegatorIndex, validator_index: ValidatorIndex) -> Gwei:
-    delegated_validator = state.delegated_validators[validator_index]
-    validator_balance = state.balances[validator_index]
-    quota = delegated_validator.delegators_quotas[delegator_index] if validator_balance > 0 else Gwei(0)
-
-    reward = validator_balance * quota
-    fee = reward * delegated_validator.delegated_validator.fee_percentage // 1_000_000
-
-    return reward - fee
-```
-
-### withdraw_from_delegator
-
-```python
-def withdraw_from_delegator(state: BeaconState, delegator_index: DelegatorIndex) -> Withdrawal:
-    amount = state.delegators_balances[delegator_index]
-    assert amount > 0
-
-    state.delegators_balances[delegator_index] = Gwei(0)
-    delegator = state.delegators[delegator_index]
-
-    return Withdrawal(
-        index=state.next_withdrawal_index,
-        validator_index=ValidatorIndex(0),  # Placeholder: delegator withdrawal context
-        address=delegator.withdrawal_credentials,
-        amount=amount,
-    )
-```
-
----
-
-## Delegation Helper Functions
-
-```python
-def get_delegator_index(state: BeaconState, pubkey: BLSPubkey) -> Optional[DelegatorIndex]:
-    for i, d in enumerate(state.delegators):
-        if d.pubkey == pubkey:
-            return DelegatorIndex(i)
-    return None
-
-def register_new_delegator(state: BeaconState, execution_address: ExecutionAddress) -> DelegatorIndex:
-    delegator = Delegator(
-        execution_address=execution_address,
-        delegator_entry_epoch=compute_epoch_at_slot(state.slot),
-    )
-    state.delegators.append(delegator)
-    state.delegators_balances.append(Gwei(0))
-    return DelegatorIndex(len(state.delegators) - 1)
-```
-
-## Delegator Extensions for Enhanced eODS
-
----
-This section defines advanced delegator logic used in dynamic re-delegation and validator early-liquidity exits.
-
 ### delegate_to_validator
 
 ```python
-def delegate_to_validator(state: BeaconState, delegated_index:DelegatorIndex, validator_index: ValidatorIndex, delegated_amount: Gwei) -> None:
+def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, validator_pubkey: BLSPubkey, delegated_amount: Gwei) -> None:
+    # state, delegator_index, validator.pubkey, delegated_amount
+    decrease_delegator_balance(state, delegator_index, delegated_amount)
     
-    
-    
-    
-    
-    delegated_validator = state.delegated_validators[validator_index]
-    validator_balance = state.balances[validator_index]
+    delegated_validator = get_delegated_validator(state, validator_pubkey)
 
-    delegator = state.delegators[delegator_index]
-    delegator.effective_delegated_balance += amount
-    delegator.delegation_entry_epoch = compute_epoch_at_slot(state.slot)
+    num_delegated_balances = len(delegated_validator.delegated_balances)
 
-    delegated_validator.total_delegated_balance += amount
-    delegated_validator.delegated_balances.append(amount)
+    if(delegator_index > num_delegated_balances):
+        for _ in range(delegator_index - num_delegated_balances):
+            delegated_validator.delegated_balances.append(0)
+            delegated_validator.delegated_quotas.append(0)
+    
+    delegated_validator.delegated_balances[delegator_index] += delegated_amount
+    delegated_validator.total_delegated_balance += delegated_amount
+    #recalcuate quotas
 
-    quota = Gwei(0) if validator_balance == 0 else amount / validator_balance
-    delegated_validator.delegators_quotas.append(quota)
+return
+    
+    OK # decrease delegator's undelegated balance
+    # increase delegated validator's balance
+    # calculate validator's initial balance and quota
+    # recalculate delegators' quotas
+    
 ```
+
 
 ### withdraw_from_validator
 
@@ -201,4 +140,25 @@ def fast_withdrawal(
         address=validator.withdrawal_credentials,
         amount=fast_withdrawal_fee,
     )
+```
+
+### Beacon state mutators
+
+#### New `decrease_delegator_balance`
+
+```python
+def decrease_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
+    """
+    Decrease the delegator balance at index ``delegator_index`` by ``delta``.
+    """
+    state.delegators_balances[delegator_index] -= delta
+```
+#### New `increase_delegator_balance`
+
+```python
+def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
+    """
+    Increase the delegator balance at index ``delegator_index`` by ``delta``.
+    """
+    state.delegators_balances[delegator_index] += delta
 ```

@@ -98,7 +98,6 @@ class Delegator(Container):
 ```python
 class DelegatedValidator(Container):
     delegated_validator: Validator
-    delegated_validator_initial_balance: Gwei
     delegated_validator_quota: uint64
     delegators_quotas: List[Quota, DELEGATOR_REGISTRY_LIMIT]
     delegated_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
@@ -123,6 +122,7 @@ class DelegationOperationRequest(Container):
 ```python
 class PendingActivateOperator(Container):
     validator_pubkey: BLSPubkey
+    fee_quotient: uint64
     source_address: ExecutionAddress
 ```
 #### `PendingDepositToDelegate`
@@ -278,7 +278,8 @@ def process_delegation_operation_request(state: BeaconState,
     if delegation_operation_request.type == ACTIVATE_OPERATOR_REQUEST_TYPE:
       state.pending_activate_operator.append(PendingActivateOperator(
           validator_pubkey=delegation_operation_request.target_pubkey,
-          source_address=delegation_operation_request.source_address
+          source_address=delegation_operation_request.source_address,
+          fee_quotient=delegation_operation_request.fee_quotient
       ))
     
     elif delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
@@ -343,17 +344,31 @@ def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequen
 
 ## Helper functions
 
-### Beacon state mutators
+### Delegation helper functions
 
-#### New `increase_delegator_balance`
+#### New `register_new_delegator`
 
 ```python
-def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
-    """
-    Increase the delegator balance at index ``delegator_index`` by ``delta``.
-    """
-    state.delegators_balances[delegator_index] += delta
+def register_new_delegator(state: BeaconState, execution_address: ExecutionAddress) -> DelegatorIndex:
+    delegator = Delegator(
+        execution_address=execution_address,
+        delegator_entry_epoch=compute_epoch_at_slot(state.slot),
+    )
+    state.delegators.append(delegator)
+    state.delegators_balances.append(Gwei(0))
+    return DelegatorIndex(len(state.delegators) - 1)
 ```
+
+#### New `get_delegated_validator`
+
+```python
+def get_delegated_validator(state: BeaconState, validator_pubkey: BLSPubkey) -> DelegatedValidator:
+  for i, dv in enumerate(state.delegated_validators):
+    if dv.delegated_validator.pubkey == validator_pubkey:
+      return dv
+```
+
+### Beacon state mutators
 
 ### Epoch processing
 
@@ -406,10 +421,26 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         return
    
       validator.is_operator = True
-
+      delegated_validator = create_delegated_validator(validator, pending_activation.fee_quotient)
+      state.delegated_validators.append(delegated_validator)  
 
     state.pending_activate_operator = []
 ```
+
+#### New `create_delegated_validator`
+
+```python
+def create_delegated_validator(validator, fee_quotient) -> DelegatedValidator:
+    return  DelegatedValidator(
+      validator = validator,
+      delegated_validator_quota = 1,
+      delegators_quotas = [],
+      delegated_balances = [],
+      total_delegated_balance = 0,
+      fee_quotient = fee_quotient
+    )
+```
+
 #### New `process_pending_delegations`
 
 ```python
@@ -434,14 +465,13 @@ def process_pending_delegations(state: BeaconState) -> None:
           has_delegator = True
 
         validator_index = validator_pubkeys.index(delegation.validator_pubkey)
-
+           
         if validator_index:
           has_validator = True
 
         if not has_delegator or not has_validator:
           break  
             
-
         # here we have delegator and validator
 
         if state.delegators_balance[delegator_index] < delegation.amount:
@@ -472,7 +502,7 @@ def process_pending_delegations(state: BeaconState) -> None:
         processed_amount += delegated_amount
         
         # here we decrement the delegators available balance
-        apply_pending_delegation(state, delegator_index, validator_index, delegated_amount)
+        delegate_to_validator(state, delegator_index, validator.pubkey, delegated_amount)
         
     state.pending_delegations = delegations_to_postpone
 
@@ -490,13 +520,7 @@ def process_pending_delegations(state: BeaconState) -> None:
   #                   has effective balance less than MAX_EFFECTIVE_BALANCE,
   #       - churn check and calculate delegable amount
   #       - delegate_to_validator(BCA)      
-#### New `apply_pending_delegation`
-```python
-def apply_pending_delegation:
-    delegate_to_validator(state, delegator_index, validator_index, delegated_amount)
-```
 
-  
 #### New `is_validator_delegable`
 
 ```python
@@ -513,7 +537,7 @@ def is_validator_delegable(validator: Validator) -> boolean:
       return False
     if validator.slashed:
       return False
-    if validator.effective_balance > MAX_EFFECTIVE_BALANCE
+    if validator.effective_balance > MAX_EFFECTIVE_BALANCE:
       return False
     
     return True
