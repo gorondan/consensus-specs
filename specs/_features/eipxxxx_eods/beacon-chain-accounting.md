@@ -28,16 +28,9 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
     
     delegated_validator.delegated_balances[delegator_index] += delegated_amount
     delegated_validator.total_delegated_balance += delegated_amount
-    
-    #recalcuate quotas(state, delegated_validator)
 
-return
-    
-    OK # decrease delegator's undelegated balance
-    # increase delegated validator's balance
-    # calculate validator's initial balance and quota
-    # recalculate delegators' quotas
-    
+    recalculate_delegators_quotas(state, delegated_validator)
+
 ```
 
 ### Accounting helper functions
