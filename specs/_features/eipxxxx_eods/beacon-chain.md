@@ -505,10 +505,38 @@ def process_pending_delegations(state: BeaconState) -> None:
 #### New `process_pending_undelegations`
 
 ```python
-# ADD UNDELEGATION EXIT QUEUE in state
-# on epoch, for each pending undelegate request, append the exit queue with an element containing the v.pubkey, amount, exit_epoch. 
-# create new loop and porcess the exit queue (withdrawable_epoch = exit_epoch + delay)
-# modify slashing logic to 1. also slash delegation exit queue and 2. active delegations 
+def process_pending_undelegations(state: BeaconState) -> None:
+    # NEW:
+        # - add undelegation_exit_queue in state
+            # here we must hold all undelegation requests until Weak Subjectivity and churn are settled 
+    # PREREQ:
+        # - withdrawal must fit in churn
+        # - validator must be active
+    # STEPS: 
+        # Queue undelegation exit request
+          # - check if delegator can undelegate the given amount (if there is enough quota in DV)
+          # - calculate the validator's fee
+              # this we need to hold in the undelegation_exit_queue 
+          # - calculate the undelegation exit epoch
+          # - create an UndelegationExitRequest:
+                          # - amount
+                          # - fee
+                          # - delegator (to transfer funds after WS)
+                          # - validator (to transfer fee after WS)
+                          # - exit epoch
+          # - add the UndelegationExitRequest to the state
+          # - remove the amount from the DV's delegated balances
+          # - recalculate quotas in DV
+        
+        # Process undelegation exit request queue:
+            # - for each request, we check if the withdrawable_epoch is here
+            # - we transfer the required funds to delegator
+            # - we transfer the required funds to validator (the fee)
+        
+        # Modify the slashing logic:    
+            # slash validator - as is now
+            # slash delegated values
+            # slash queued for exit values
 
 ```
 
