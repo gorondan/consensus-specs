@@ -1,4 +1,4 @@
-from build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
+from build.lib.eth2spec.test.helpers.state import get_validator_index_by_pubkeyfrom build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
 
 # EIP-XXX_eODS -- Beacon Chain Accounting
 
@@ -28,17 +28,25 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
     
     delegated_validator.delegated_balances[delegator_index] += delegated_amount
     delegated_validator.total_delegated_balance += delegated_amount
-    #recalcuate quotas
 
-return
-    
-    OK # decrease delegator's undelegated balance
-    # increase delegated validator's balance
-    # calculate validator's initial balance and quota
-    # recalculate delegators' quotas
-    
+    recalculate_delegators_quotas(state, delegated_validator)
+
 ```
 
+### Accounting helper functions
+
+#### New `recalculate_delegators_quotas`
+```python
+def recalculate_delegators_quotas(state: BeaconState, delegated_validator: DelegatedValidator) -> None:
+    validator_index = get_validator_index_by_pubkey(delegated_validator.validator.pubkey)
+    
+    if delegated_validator.total_delegated_balance == 0:
+        delegated_validator.delegated_validator_quota = 1
+    else :
+        delegated_validator.delegated_validator_quota = (state.balances[validator_index] /  (delegated_validator.total_delegated_balance + state.balances[validator_index]))
+        for index in range(len(delegated_validator.delegators_quotas)):
+            delegated_validator.delegators_quotas[index] = delegated_validator.delegated_balances[index] / delegated_validator.total_delegated_balance * (1-delegated_validator.delegated_validator_quota)
+```
 
 ### withdraw_from_validator
 

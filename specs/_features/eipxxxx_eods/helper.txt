@@ -95,10 +95,10 @@ pending_deposits_to_delegate, in BC)
 
 | Name                                   | Churnable |
 |----------------------------------------|-----------|
-| `ACTIVATE_OPERATOR_REQUEST_TYPE`       | NO        |
-| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE`     | NO        |
-| `DELEGATE_REQUEST_TYPE`                | YES       |
-| `UNDELEGATE_REQUEST_TYPE`              | YES       |
+| `ACTIVATE_OPERATOR_REQUEST_TYPE`       | NO        | ok
+| `DEPOSIT_TO_DELEGATE_REQUEST_TYPE`     | NO        | ok
+| `DELEGATE_REQUEST_TYPE`                | YES       | ok
+| `UNDELEGATE_REQUEST_TYPE`              | YES       | -
 | `REDELEGATE_REQUEST_TYPE`              | YES       |
 | `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | NO        |
 | `EARLY_LIQUIDITY_REQUEST_TYPE`         | NO        |

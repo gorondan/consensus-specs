@@ -1,3 +1,5 @@
+from mypy.state import state
+
 # EIP-XXX_eODS -- The Beacon Chain
 
 ## Table of contents
@@ -491,28 +493,24 @@ def process_pending_delegations(state: BeaconState) -> None:
         else: 
             delegations_to_postpone.append(delegation)
             break
-            
-        processed_amount += delegated_amount
-        
+
         # here we decrement the delegators available balance
         delegate_to_validator(state, delegator_index, validator.pubkey, delegated_amount)
         
+        processed_amount += delegated_amount
+
     state.pending_delegations = delegations_to_postpone
 
 ```
-  # - calculate available delegation churn
-  #   - for each pending delegation in state.pending delegation:
-  #       - check if the pending delegation slot has been finalized
-  #       - check if delegator source address matches request source address
-  #           actually this is a lookup by source address
-  #       - check if delegator has enough balance to delegate
-  #       - check if target validator:
-  #                   is_operator,
-  #                   active & not exiting,
-  #                   not slashed,
-  #                   has effective balance less than MAX_EFFECTIVE_BALANCE,
-  #       - churn check and calculate delegable amount
-  #       - delegate_to_validator(BCA)      
+#### New `process_pending_undelegations`
+
+```python
+# ADD UNDELEGATION EXIT QUEUE in state
+# on epoch, for each pending undelegate request, append the exit queue with an element containing the v.pubkey, amount, exit_epoch. 
+# create new loop and porcess the exit queue (withdrawable_epoch = exit_epoch + delay)
+# modify slashing logic to 1. also slash delegation exit queue and 2. active delegations 
+
+```
 
 #### New `is_validator_delegable`
 
@@ -551,6 +549,7 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_activate_operators(state)
     process_pending_deposits_to_delegate(state)  # [New in EIPXXXX_eODS]
     process_pending_delegations(state)  # [New in EIPXXXX_eODS]
+    process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
