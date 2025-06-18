@@ -421,24 +421,17 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         return
    
       validator.is_operator = True
-      delegated_validator = create_delegated_validator(validator, pending_activation.fee_quotient)
-      state.delegated_validators.append(delegated_validator)  
-
-    state.pending_activate_operator = []
-```
-
-#### New `create_delegated_validator`
-
-```python
-def create_delegated_validator(validator, fee_quotient) -> DelegatedValidator:
-    return  DelegatedValidator(
+      
+      delegated_validator =  DelegatedValidator(
       validator = validator,
       delegated_validator_quota = 1,
       delegators_quotas = [],
       delegated_balances = [],
       total_delegated_balance = 0,
-      fee_quotient = fee_quotient
-    )
+      fee_quotient = pending_activation.fee_quotient
+    ) 
+     
+    state.pending_activate_operator = []
 ```
 
 #### New `process_pending_delegations`
