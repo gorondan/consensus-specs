@@ -46,109 +46,37 @@ def recalculate_delegators_quotas(state: BeaconState, delegated_validator: Deleg
         delegated_validator.delegated_validator_quota = (state.balances[validator_index] /  (delegated_validator.total_delegated_balance + state.balances[validator_index]))
         for index in range(len(delegated_validator.delegators_quotas)):
             delegated_validator.delegators_quotas[index] = delegated_validator.delegated_balances[index] / delegated_validator.total_delegated_balance * (1-delegated_validator.delegated_validator_quota)
-```
-
-### withdraw_from_validator
+``` 
+#### New `apply_delegations_rewards`
 
 ```python
-def withdraw_from_validator(state: BeaconState, delegator_index: DelegatorIndex, validator_index: ValidatorIndex) -> None:
-    delegator = state.delegators[delegator_index]
-    delegated_validator = state.delegated_validators[validator_index]
-
-    subindex = delegator_index  # parallel index assumption
-    principal = delegated_validator.delegated_balances[subindex]
-    validator_balance = state.balances[validator_index]
-
-    delegator_quota = Gwei(0) if validator_balance == 0 else delegated_validator.delegators_quotas[subindex]
-    payout = validator_balance * delegator_quota
-
-    fee = payout * delegated_validator.delegated_validator.fee_percentage // 1_000_000
-    net_amount = payout - fee
-
-    state.delegators_balances[delegator_index] += net_amount
-
-    delegated_validator.delegated_balances[subindex] = Gwei(0)
-    delegated_validator.total_delegated_balance -= principal
-    delegator.effective_delegated_balance = Gwei(0)
+def apply_delegations_rewards(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
+    delegated_validator.total_delegated_balance += amount
+    
+    for index in range(len(delegated_validator.delegators_quotas)):
+        delegated_validator.delegated_balances[index] += amount * delegated_validator.delegators_quotas[index]
 ```
+
+#### New `apply_delegations_penalties`
+
+```python
+def apply_delegations_penalties(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
+    delegated_validator.total_delegated_balance -= amount
+    
+    for index in range(len(delegated_validator.delegators_quotas)):
+        delegated_validator.delegated_balances[index] -= amount * delegated_validator.delegators_quotas[index]
+```
+
+#### New `apply_delegations_slashing`
+
+```python
+def apply_delegations_slashing(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
+    # slash the delegated balances
+        
+    # slash the exit queue
+  ```
+
 ## Advanced Delegation Lifecycle
-
-### fast_redelegate
-
-```python
-def fast_redelegate(
-    state: BeaconState,
-    from_validator_index: ValidatorIndex,
-    to_validator_index: ValidatorIndex,
-    delegator_index: DelegatorIndex,
-    amount: Gwei
-) -> None:
-    """
-    Transfers a portion of delegated stake from one delegated validator to another,
-    without requiring full withdrawal to the delegator balance.
-
-    Preconditions:
-    - The delegator has sufficient effective_delegated_balance with the `from_validator_index`.
-    - Both validators are registered delegated validators.
-    - Quotas and delegated_balances are updated in-place.
-    - No fees are applied.
-
-    Postconditions:
-    - Quotas and balances are adjusted in both validators.
-    - Delegator’s effective_delegated_balance remains unchanged.
-    """
-    assert from_validator_index != to_validator_index
-    assert amount > 0
-
-    from_validator = state.delegated_validators[from_validator_index]
-    to_validator = state.delegated_validators[to_validator_index]
-
-    # Assume index alignment
-    subindex = delegator_index
-
-    assert from_validator.delegated_balances[subindex] >= amount
-    from_validator.delegated_balances[subindex] -= amount
-    from_validator.total_delegated_balance -= amount
-
-    to_validator.delegated_balances[subindex] += amount
-    to_validator.total_delegated_balance += amount
-
-    # Update quota proportionally based on validator's current balance
-    to_balance = state.balances[to_validator_index]
-    updated_quota = Gwei(0) if to_balance == 0 else amount / to_balance
-    to_validator.delegators_quotas[subindex] += updated_quota
-```
-
-### fast_withdrawal
-
-```python
-def fast_withdrawal(
-    state: BeaconState,
-    delegator_index: DelegatorIndex,
-    validator_index: ValidatorIndex,
-    fast_withdrawal_fee: Gwei
-) -> Withdrawal:
-    """
-    Allows a validator to receive early liquidity by borrowing undelegated balance from a delegator.
-    The delegator sends a withdrawal to the validator’s withdrawal credentials and receives the fee.
-
-    Preconditions:
-    - Delegator has sufficient undelegated balance.
-    - Validator is registered and has a pending exit or reduced liquidity.
-    """
-    assert state.delegators_balances[delegator_index] >= fast_withdrawal_fee
-
-    delegator = state.delegators[delegator_index]
-    state.delegators_balances[delegator_index] -= fast_withdrawal_fee
-
-    validator = state.validators[validator_index]
-    return Withdrawal(
-        index=state.next_withdrawal_index,
-        validator_index=validator_index,
-        address=validator.withdrawal_credentials,
-        amount=fast_withdrawal_fee,
-    )
-```
 
 ### Beacon state mutators
 

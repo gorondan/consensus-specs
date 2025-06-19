@@ -507,7 +507,7 @@ def process_pending_delegations(state: BeaconState) -> None:
 ```python
 def process_pending_undelegations(state: BeaconState) -> None:
     # NEW:
-        # - add undelegation_exit_queue in state
+        # - add undelegations_exit_queue in state
             # here we must hold all undelegation requests until Weak Subjectivity and churn are settled 
     # PREREQ:
         # - withdrawal must fit in churn
@@ -518,13 +518,13 @@ def process_pending_undelegations(state: BeaconState) -> None:
           # - calculate the validator's fee
               # this we need to hold in the undelegation_exit_queue 
           # - calculate the undelegation exit epoch
-          # - create an UndelegationExitRequest:
+          # - create an UndelegationExit:
                           # - amount
                           # - fee
-                          # - delegator (to transfer funds after WS)
-                          # - validator (to transfer fee after WS)
+                          # - delegator pubkey (to transfer funds to after WS)
+                          # - validator pubkey (to transfer fee to after WS)
                           # - exit epoch
-          # - add the UndelegationExitRequest to the state
+          # - add the UndelegationExit to the state
           # - remove the amount from the DV's delegated balances
           # - recalculate quotas in DV
         
@@ -536,8 +536,88 @@ def process_pending_undelegations(state: BeaconState) -> None:
         # Modify the slashing logic:    
             # slash validator - as is now
             # slash delegated values
-            # slash queued for exit values
+            # slash queued UndelegationExit amount and fee
 
+```
+#### Modified process_rewards_and_penalties
+
+*Note*: The function `process_rewards_and_penalties` is modified to support the incentive accounting reforms.
+
+```python
+def process_rewards_and_penalties(state: BeaconState) -> None:
+    # No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
+    if get_current_epoch(state) == GENESIS_EPOCH:
+        return
+
+    flag_deltas = [get_flag_index_deltas(state, flag_index) for flag_index in range(len(PARTICIPATION_FLAG_WEIGHTS))]
+    deltas = flag_deltas + [get_inactivity_penalty_deltas(state)]
+    for (rewards, penalties) in deltas:    
+        for index in range(len(state.validators)):
+            validator = state.validators[index]
+            if validator.is_operator:
+              delegated_validator = get_delegated_validator(state, validator.pubkey)
+              validator_quota = delegated_validator.delegated_validator_quota
+              # Applies proportional rewards and penalties 
+              apply_delegations_rewards(rewards[index] - rewards[index] * validator_quota, delegated_validator)
+              apply_delegations_penalties(penalties[index] - penalties[index] * validator_quota, delegated_validator)
+              
+              increase_balance(state, ValidatorIndex(index), rewards[index] * validator_quota)
+              decrease_balance(state, ValidatorIndex(index), penalties[index] * validator_quota)
+            else:
+              increase_balance(state, ValidatorIndex(index), rewards[index])
+              decrease_balance(state, ValidatorIndex(index), penalties[index])
+              
+```
+#### Modified `process_slashings`
+```python
+def process_slashings(state: BeaconState) -> None:
+    epoch = get_current_epoch(state)
+    total_balance = get_total_active_balance(state)
+    adjusted_total_slashing_balance = min(
+        sum(state.slashings) * PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
+        total_balance
+    )
+    increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from total balance to avoid uint64 overflow
+    penalty_per_effective_balance_increment = adjusted_total_slashing_balance // (total_balance // increment)
+    for index, validator in enumerate(state.validators):
+        if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+            effective_balance_increments = validator.effective_balance // increment
+            penalty = penalty_per_effective_balance_increment * effective_balance_increments
+            
+            # [New in EIPXXXX_eODS]
+            if validator.is_operator:
+                delegated_validator = get_delegated_validator(state, validator.pubkey)
+                validator_penalty = penalty * delegated_validator.delegated_validator_quota
+                delegations_penalty = penalty - validator_penalty
+
+                decrease_balance(state, ValidatorIndex(index), validator_penalty)
+                apply_delegations_slashing(delegations_penalty, delegated_validator)
+            else:
+                decrease_balance(state, ValidatorIndex(index), penalty)
+```
+
+#### Modified `process_effective_balance_updates`
+
+*Note*: The function `process_effective_balance_updates` is modified to add .....
+
+```python
+def process_effective_balance_updates(state: BeaconState) -> None:
+    # Update effective balances with hysteresis
+    for index, validator in enumerate(state.validators):
+        validator = state.validators[index]
+        if validator.is_operator:
+          balance = state.balances[index] + get_delegated_validator(state, validator.pubkey).total_delegated_balance  # [Modified in EIPXXXX_eODS]
+        else:
+          balance = state.balances[index]       
+        HYSTERESIS_INCREMENT = uint64(EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT)
+        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
+        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
+        max_effective_balance = get_max_effective_balance(validator)
+        if (
+            balance + DOWNWARD_THRESHOLD < validator.effective_balance
+            or validator.effective_balance + UPWARD_THRESHOLD < balance
+        ):
+            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, max_effective_balance)
 ```
 
 #### New `is_validator_delegable`
