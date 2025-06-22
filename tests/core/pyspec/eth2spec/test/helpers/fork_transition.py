@@ -1,39 +1,44 @@
-from enum import Enum, auto
+from enum import auto, Enum
 
-from eth2spec.test.helpers.attester_slashings import (
-    get_valid_attester_slashing_by_indices,
-)
 from eth2spec.test.helpers.attestations import (
     next_slots_with_attestations,
     state_transition_with_full_block,
 )
+from eth2spec.test.helpers.attester_slashings import (
+    get_valid_attester_slashing_by_indices,
+)
 from eth2spec.test.helpers.block import (
-    build_empty_block_for_next_slot,
     build_empty_block,
+    build_empty_block_for_next_slot,
     sign_block,
 )
 from eth2spec.test.helpers.bls_to_execution_changes import get_signed_address_change
+from eth2spec.test.helpers.consolidations import (
+    prepare_switch_to_compounding_request,
+)
 from eth2spec.test.helpers.constants import (
+    DENEB,
     PHASE0,
     POST_FORK_OF,
     PREVIOUS_FORK_OF,
-    DENEB,
 )
 from eth2spec.test.helpers.deposits import (
-    prepare_state_and_deposit,
     prepare_deposit_request,
+    prepare_state_and_deposit,
 )
 from eth2spec.test.helpers.execution_payload import (
+    build_empty_execution_payload,
+    compute_el_block_hash,
     compute_el_block_hash_for_block,
-)
-from eth2spec.test.helpers.proposer_slashings import (
-    get_valid_proposer_slashing,
 )
 from eth2spec.test.helpers.forks import (
     get_next_fork_transition,
     is_post_bellatrix,
-    is_post_electra,
     is_post_eip7732,
+    is_post_electra,
+)
+from eth2spec.test.helpers.proposer_slashings import (
+    get_valid_proposer_slashing,
 )
 from eth2spec.test.helpers.state import (
     next_slot,
@@ -45,13 +50,6 @@ from eth2spec.test.helpers.voluntary_exits import (
 )
 from eth2spec.test.helpers.withdrawals import (
     prepare_withdrawal_request,
-)
-from eth2spec.test.helpers.consolidations import (
-    prepare_switch_to_compounding_request,
-)
-from eth2spec.test.helpers.execution_payload import (
-    build_empty_execution_payload,
-    compute_el_block_hash,
 )
 
 
@@ -202,6 +200,43 @@ def do_fork(
     assert spec.get_current_epoch(state) == fork_epoch
 
     state = get_upgrade_fn(post_spec, post_spec.fork)(state)
+
+    assert state.fork.epoch == fork_epoch
+
+    previous_fork = PREVIOUS_FORK_OF[post_spec.fork]
+    if previous_fork == PHASE0:
+        previous_version = spec.config.GENESIS_FORK_VERSION
+    else:
+        previous_version = getattr(post_spec.config, f"{previous_fork.upper()}_FORK_VERSION")
+    current_version = getattr(post_spec.config, f"{post_spec.fork.upper()}_FORK_VERSION")
+
+    assert state.fork.previous_version == previous_version
+    assert state.fork.current_version == current_version
+
+    if with_block:
+        return state, _state_transition_and_sign_block_at_slot(
+            post_spec,
+            state,
+            sync_aggregate=sync_aggregate,
+            operation_dict=operation_dict,
+        )
+    else:
+        return state, None
+
+
+def do_fork_generate(
+    state, spec, post_spec, fork_epoch, with_block=True, sync_aggregate=None, operation_dict=None
+):
+    spec.process_slots(state, state.slot + 1)
+
+    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert spec.get_current_epoch(state) == fork_epoch
+
+    yield "pre", state
+
+    state = get_upgrade_fn(post_spec, post_spec.fork)(state)
+
+    yield "post", state
 
     assert state.fork.epoch == fork_epoch
 
