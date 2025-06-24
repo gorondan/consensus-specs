@@ -1,4 +1,4 @@
-from build.lib.eth2spec.test.helpers.state import get_validator_index_by_pubkeyfrom build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
+from bla2 import UndelegationExitfrom build.lib.eth2spec.test.helpers.state import get_validator_index_by_pubkeyfrom build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
 
 # EIP-XXX_eODS -- Beacon Chain Accounting
 
@@ -97,4 +97,43 @@ def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorInd
     Increase the delegator balance at index ``delegator_index`` by ``delta``.
     """
     state.delegators_balances[delegator_index] += delta
+```
+
+#### New `undelegate_from_validator`
+```python
+def undelegate_from_validator(undelegation_exit: UndelegationExit) -> Gwei:
+    delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
+    
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    delegator_index = DelegatorIndex(delegators_execution_addresses.index(undelegation_exit.delegator_pubkey))
+    
+    requested_to_undelegate = undelegation_exit.amount + undelegation_exit.amount*delegated_validator.fee_quotient
+    max_undelegatable = delegated_validator.delegated_balances[delegator_index]
+    
+    amount_to_undelegate = min(requested_to_undelegate, max_undelegatable)
+    
+    delegated_validator.delegated_balances[delegator_index] -= amount_to_undelegate
+    delegated_validator.total_delegated_balance -= amount_to_undelegate
+    
+    recalculate_delegators_quotas(state, delegated_validator)
+    
+    return amount_to_undelegate
+```
+
+#### New `settle_undelegation`
+```python
+def settle_undelegation(undelegation_exit: UndelegationExit) -> None:
+    delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
+    
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    delegator_index = DelegatorIndex(delegators_execution_addresses.index(undelegation_exit.delegator_pubkey))
+    
+    validator_pubkeys = [v.pubkey for v in state.validators]
+    validator_index = ValidatorIndex(validator_pubkeys.index(undelegation_exit.validator_pubkey))
+    
+    undelegation_amount = undelegation_exit.amount / (1 + delegated_validator.fee_quotient)
+    validator_fee = undelegation_exit.amount - undelegation
+    
+    increase_delegator_balance(state, delegator_index, undelegation_amount)
+    increase_balance(state, ValidatorIndex(validator_index), validator_fee)
 ```
