@@ -116,3 +116,9 @@ pending_deposits_to_delegate, in BC)
         ACTIVATE_OPERATOR
     --- perks operations
         EARLY_LIQUIDITY
+
+###
+
+    undelegations_exit_queue: List[UndelegationExit, PENDING_DELEGATION_OPERATIONS_LIMIT] - need a new limit?
+    withdrawal must fit in churn - we queue the exit epoch anyway so...
+    if not is_validator_delegable(delegated_validator.validator): - do we just drop the pending?
