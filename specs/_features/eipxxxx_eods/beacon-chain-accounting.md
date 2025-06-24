@@ -154,7 +154,7 @@ def settle_undelegation(undelegation_exit: UndelegationExit) -> None:
     validator_index = ValidatorIndex(validator_pubkeys.index(undelegation_exit.validator_pubkey))
     
     undelegation_amount = undelegation_exit.amount / (1 + delegated_validator.fee_quotient)
-    validator_fee = undelegation_exit.amount - undelegation
+    validator_fee = undelegation_exit.amount - undelegation_amount
     
     increase_delegator_balance(state, delegator_index, undelegation_amount)
     increase_balance(state, ValidatorIndex(validator_index), validator_fee)
