@@ -1,3 +1,25 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [EIP-XXX_eODS -- Beacon Chain Accounting](#eip-xxx_eods----beacon-chain-accounting)
+  - [Introduction](#introduction)
+  - [Delegation Lifecycle Functions](#delegation-lifecycle-functions)
+    - [delegate_to_validator](#delegate_to_validator)
+    - [Accounting helper functions](#accounting-helper-functions)
+      - [New `recalculate_delegators_quotas`](#new-recalculate_delegators_quotas)
+      - [New `apply_delegations_rewards`](#new-apply_delegations_rewards)
+      - [New `apply_delegations_penalties`](#new-apply_delegations_penalties)
+      - [New `apply_delegations_slashing`](#new-apply_delegations_slashing)
+  - [Advanced Delegation Lifecycle](#advanced-delegation-lifecycle)
+    - [Beacon state mutators](#beacon-state-mutators)
+      - [New `decrease_delegator_balance`](#new-decrease_delegator_balance)
+      - [New `increase_delegator_balance`](#new-increase_delegator_balance)
+      - [New `undelegate_from_validator`](#new-undelegate_from_validator)
+      - [New `settle_undelegation`](#new-settle_undelegation)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 from bla2 import UndelegationExitfrom build.lib.eth2spec.test.helpers.state import get_validator_index_by_pubkeyfrom build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
 
 # EIP-XXX_eODS -- Beacon Chain Accounting
