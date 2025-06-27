@@ -678,7 +678,8 @@ def process_slashings(state: BeaconState) -> None:
 
 #### Modified `process_effective_balance_updates`
 
-*Note*: The function `process_effective_balance_updates` is modified to add .....
+*Note*: The function `process_effective_balance_updates` is modified to cumulate a validator's delegated balance into
+it's effective balance calculation.
 
 ```python
 def process_effective_balance_updates(state: BeaconState) -> None:
