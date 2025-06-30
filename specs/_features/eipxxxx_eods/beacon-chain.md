@@ -618,7 +618,6 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
     state.undelegations_exit_queue = postponed
 ```
 
-
 #### Modified process_rewards_and_penalties
 
 *Note*: The function `process_rewards_and_penalties` is modified to support the incentive accounting reforms.
@@ -749,7 +748,6 @@ def process_epoch(state: BeaconState) -> None:
 ```
 
 #### Operations
-
 ##### Modified `process_operations`
 
 ```python
