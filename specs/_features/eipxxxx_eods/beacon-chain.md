@@ -471,9 +471,6 @@ def process_pending_activate_operators(state: BeaconState) -> None:
       )
       if not (has_correct_credential and is_correct_source_address):
         return
-      # Verify the validator is active
-      if not is_active_validator(validator, get_current_epoch(state)):
-        return
       # Verify exit has not been initiated
       if validator.exit_epoch != FAR_FUTURE_EPOCH:
         return
