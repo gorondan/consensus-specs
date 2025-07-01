@@ -98,11 +98,11 @@ without dynamic validator selection or delegator governance.
 
 ### Execution layer triggered requests
 
-| Name                                | Value            |
-|-------------------------------------|------------------|
-| `DELEGATION_OPERATION_REQUEST_TYPE` | `Bytes1('0x03')` |
+| Name                                 | Value            |
+|--------------------------------------|------------------|
+| `DELEGATION_OPERATIONS_REQUEST_TYPE` | `Bytes1('0x03')` |
 
-### Execution layer triggered delegation requests
+### Delegation Operations Request Types
 
 | Name                                   | Value            |
 |----------------------------------------|------------------|
@@ -393,7 +393,7 @@ def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequen
         (DEPOSIT_REQUEST_TYPE, execution_requests.deposits),
         (WITHDRAWAL_REQUEST_TYPE, execution_requests.withdrawals),
         (CONSOLIDATION_REQUEST_TYPE, execution_requests.consolidations),
-        (DELEGATION_OPERATION_REQUEST_TYPE, execution_requests.delegation_operations),
+        (DELEGATION_OPERATIONS_REQUEST_TYPE, execution_requests.delegation_operations),
     ]
 
     return [
