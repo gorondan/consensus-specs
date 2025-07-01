@@ -488,7 +488,7 @@ def process_pending_activate_operators(state: BeaconState) -> None:
       total_delegated_balance = 0,
       fee_quotient = pending_activation.fee_quotient
     ) 
-     
+    state.delegated_validators.append(delegated_validator)
     state.pending_activate_operator = []
 ```
 
