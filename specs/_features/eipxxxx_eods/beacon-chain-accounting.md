@@ -92,10 +92,12 @@ def apply_delegations_penalties(amount: Gwei, delegated_validator: DelegatedVali
 #### New `apply_delegations_slashing`
 
 ```python
-def apply_delegations_slashing(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
+def apply_delegations_slashing(delegated_validator: DelegatedValidator, penalty: Gwei, )-> None:
+    delegated_validator.total_delegated_balance -= penalty
+    
     # slash the delegated balances
-        
-    # slash the exit queue
+    for index in range(len(delegated_validator.delegated_balances)):
+        delegated_validator.delegated_balances[index] -= penalty * delegated_validator.delegators_quotas[index]
   ```
 
 ## Advanced Delegation Lifecycle
@@ -143,6 +145,7 @@ def undelegate_from_validator(undelegation_exit: UndelegationExit) -> Gwei:
 ```
 
 #### New `settle_undelegation`
+
 ```python
 def settle_undelegation(undelegation_exit: UndelegationExit) -> None:
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)

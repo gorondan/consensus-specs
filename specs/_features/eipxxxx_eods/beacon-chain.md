@@ -223,7 +223,8 @@ class PendingWithdrawFromDelegatorRequest(Container):
 
 ```python
 class UndelegationExit(Container):
-  amount: Gwei
+  undelegated_amount: Gwei
+  total_delegated_at_withdrawal: Gwei
   delegator_pubkey: BLSPubkey
   validator_pubkey: BLSPubkey
   exit_queue_epoch: Epoch
@@ -358,7 +359,7 @@ def process_delegation_operation_request(state: BeaconState,
       ))
 
     elif delegation_operation_request.type == UNDELEGATE_REQUEST_TYPE:
-      state.pending_undelegate.append(PendingUndelegateRequest(
+      state.pending_undelegations.append(PendingUndelegateRequest(
         validator_pubkey=delegation_operation_request.target_pubkey,
         execution_address = delegation_operation_request.execution_address,
         amount=delegation_operation_request.amount
@@ -562,19 +563,31 @@ def process_pending_delegations(state: BeaconState) -> None:
 
 ```python
 def process_pending_undelegations(state: BeaconState) -> None:
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    
     for undelegate in state.pending_undelegations:
         delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
         if not delegated_validator:
           break
         if not is_validator_delegable(delegated_validator.validator):
             break
+        
+        delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
+        if not delegator_index:
+            break
+        
+        if len(delegated_validator.delegators_quotas) < delegator_index:
+            break  
+        
+        if delegated_validator.delegators_quotas[delegator_index] == 0:
+            break
     
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, undelegate.amount)
         withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-        
+         
         state.undelegations_exit_queue.append(
           UndelegationExit(
-            amount=undelegate.amount, 
+            amount=undelegate.amount,             
             exit_queue_epoch=exit_queue_epoch, withdrawable_epoch=withdrawable_epoch, 
             delegator_pubkey=undelegate.execution_address, validator_pubkey=undelegate.validator_pubkey))
     state.pending_undelegations = []
@@ -644,7 +657,9 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
               decrease_balance(state, ValidatorIndex(index), penalties[index])
               
 ```
+
 #### Modified `process_slashings`
+
 ```python
 def process_slashings(state: BeaconState) -> None:
     epoch = get_current_epoch(state)
@@ -661,15 +676,42 @@ def process_slashings(state: BeaconState) -> None:
             penalty = penalty_per_effective_balance_increment * effective_balance_increments
             
             # [New in EIPXXXX_eODS]
-            if validator.is_operator:
+            if validator.is_operator: 
+                # slash the exit queue
+                slashed_in_queue = slash_exit_queue(state, penalty)
+                
+                rest_to_slash = penalty - slashed_in_queue
+                
                 delegated_validator = get_delegated_validator(state, validator.pubkey)
-                validator_penalty = penalty * delegated_validator.delegated_validator_quota
-                delegations_penalty = penalty - validator_penalty
+              
+                validator_penalty = delegated_validator.delegated_validator_quota * rest_to_slash
+                delegators_penalty =  rest_to_slash - validator_slash
 
+                # slash the validator
                 decrease_balance(state, ValidatorIndex(index), validator_penalty)
-                apply_delegations_slashing(delegations_penalty, delegated_validator)
+                
+                # slash the delegations
+                apply_delegations_slashing(delegated_validator, delegators_penalty)
             else:
                 decrease_balance(state, ValidatorIndex(index), penalty)
+```
+
+#### New `slash_exit_queue`
+
+```python
+def slash_exit_queue(state: BeaconState, penalty: Gwei) -> Gwei:
+    total_slashed_in_queue = 0
+    
+    for index in range(len(state.exit_queue)):
+      exit_item = state.exit_queue[index]
+      delegated_quota = exit_item.undelegated_amount / exit_item.total_delegated_at_withdrawal
+      to_slash = delegated_quota * penalty
+          
+      total_slashed_in_queue += to_slash
+      
+      state.exit_queue[index].undelegated_amount -= to_slash
+    
+    return total_slashed_in_queue
 ```
 
 #### Modified `process_effective_balance_updates`
