@@ -705,7 +705,7 @@ def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: G
     total_slashed_in_queue = 0
     
     for index in range(len(list_to_slash)):
-      exit_item = state.exit_queue[index]
+      exit_item = state.list_to_slash[index]
       
       delegated_quota = exit_item.undelegated_amount / exit_item.total_delegated_at_withdrawal
       to_slash = delegated_quota * penalty
