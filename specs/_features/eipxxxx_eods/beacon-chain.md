@@ -678,7 +678,7 @@ def process_slashings(state: BeaconState) -> None:
             # [New in EIPXXXX_eODS]
             if validator.is_operator: 
                 # slash the exit queue
-                slashed_in_queue = slash_exit_queue(state, penalty)
+                slashed_in_queue = slash_exit_queue(state, validator.pubkey, penalty)
                 
                 rest_to_slash = penalty - slashed_in_queue
                 
@@ -699,11 +699,14 @@ def process_slashings(state: BeaconState) -> None:
 #### New `slash_exit_queue`
 
 ```python
-def slash_exit_queue(state: BeaconState, penalty: Gwei) -> Gwei:
+def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: Gwei) -> Gwei:
+    current_epoch = get_current_epoch(state)
+    list_to_slash = [item for item in state.exit_queue if item.validator_pubkey == validator_pubkey and item.exit_queue_epoch < current_epoch]
     total_slashed_in_queue = 0
     
-    for index in range(len(state.exit_queue)):
+    for index in range(len(list_to_slash)):
       exit_item = state.exit_queue[index]
+      
       delegated_quota = exit_item.undelegated_amount / exit_item.total_delegated_at_withdrawal
       to_slash = delegated_quota * penalty
           
