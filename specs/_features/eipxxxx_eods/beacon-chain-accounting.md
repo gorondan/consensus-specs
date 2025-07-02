@@ -131,7 +131,7 @@ def undelegate_from_validator(undelegation_exit: UndelegationExit) -> Gwei:
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
     delegator_index = DelegatorIndex(delegators_execution_addresses.index(undelegation_exit.delegator_pubkey))
     
-    requested_to_undelegate = undelegation_exit.amount + undelegation_exit.amount*delegated_validator.fee_quotient
+    requested_to_undelegate = undelegation_exit.amount + undelegation_exit.amount * delegated_validator.fee_quotient
     max_undelegable = delegated_validator.delegated_balances[delegator_index]
     
     amount_to_undelegate = min(requested_to_undelegate, max_undelegable)
@@ -142,6 +142,11 @@ def undelegate_from_validator(undelegation_exit: UndelegationExit) -> Gwei:
     recalculate_delegators_quotas(state, delegated_validator)
     
     return amount_to_undelegate
+```
+#### New `settle_and_redelegate`
+```python
+def settle_and_redelegate(undelegation_exit: UndelegationExit) -> None:
+    return
 ```
 
 #### New `settle_undelegation`

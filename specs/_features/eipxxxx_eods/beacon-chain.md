@@ -1,4 +1,4 @@
-from mypy.state import state
+from build.lib.eth2spec.fulu.mainnet import BeaconStatefrom mypy.state import state
 
 # EIP-XXX_eODS -- The Beacon Chain
 
@@ -206,7 +206,7 @@ class PendingUndelegateRequest(Container):
 class PendingRedelegateRequest(Container):
   source_pubkey: BLSPubkey
   target_pubkey: BLSPubkey
-  signature: BLSSignature
+  execution_address: ExecutionAddress
   amount: Gwei
 ```
 
@@ -229,6 +229,7 @@ class UndelegationExit(Container):
   validator_pubkey: BLSPubkey
   exit_queue_epoch: Epoch
   withdrawable_epoch: Epoch
+  is_redelegation: bool
 
 ```
 
@@ -369,7 +370,7 @@ def process_delegation_operation_request(state: BeaconState,
       state.pending_redelegate.append(PendingRedelegateRequest(
         source_pubkey=delegation_operation_request.source_pubkey,
         target_pubkey=delegation_operation_request.target_pubkey,
-        signature=delegation_operation_request.signature,
+        execution_address = delegation_operation_request.execution_address,
         amount=delegation_operation_request.amount
       ))
         
@@ -593,6 +594,11 @@ def process_pending_undelegations(state: BeaconState) -> None:
     state.pending_undelegations = []
 ```
 
+#### New `process_pending_redelegations`
+```python
+def process_pending_redelegations(state: BeaconState) -> None :
+    return
+```
 #### New `process_undelegations_exit_queue`
 
 ```python
@@ -620,7 +626,12 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
             # the amount has been undelegated, we now check for withdrawability
             if current_epoch >= undelegation_exit.withdrawable_epoch:
                 # we can withdraw
-                settle_undelegation(undelegation_exit)
+                if undelegation_exit.is_redelegation:
+                    # if is redelegation then pay validator fee and redelegate the undelegated amount to target val.
+                    settle_and_redelegate(undelegation_exit)
+                else:
+                    # pay validator fee and send undelegated amount to delegator
+                    settle_undelegation(undelegation_exit)
             else:
                 # we can not withdraw, we postpone
                 postponed.append(undelegation_exit)
@@ -780,6 +791,7 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_deposits_to_delegate(state)  # [New in EIPXXXX_eODS]
     process_pending_delegations(state)  # [New in EIPXXXX_eODS]
     process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
+    process_pending_redelegations(state)  # [New in EIPXXXX_eODS]
     process_undelegations_exit_queue(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
