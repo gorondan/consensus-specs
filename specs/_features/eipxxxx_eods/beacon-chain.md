@@ -1,4 +1,4 @@
-from build.lib.eth2spec.fulu.mainnet import BeaconStatefrom mypy.state import state
+from build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom build.lib.eth2spec.fulu.mainnet import BeaconStatefrom mypy.state import state
 
 # EIP-XXX_eODS -- The Beacon Chain
 
@@ -229,7 +229,8 @@ class UndelegationExit(Container):
   validator_pubkey: BLSPubkey
   exit_queue_epoch: Epoch
   withdrawable_epoch: Epoch
-  is_redelegation: bool
+  is_redelegation: boolean
+  redelegate_to_validator_pubkey: BLSPubkey
 
 ```
 
@@ -370,7 +371,7 @@ def process_delegation_operation_request(state: BeaconState,
       state.pending_redelegate.append(PendingRedelegateRequest(
         source_pubkey=delegation_operation_request.source_pubkey,
         target_pubkey=delegation_operation_request.target_pubkey,
-        execution_address = delegation_operation_request.execution_address,
+        execution_address=delegation_operation_request.execution_address,
         amount=delegation_operation_request.amount
       ))
         
@@ -597,7 +598,34 @@ def process_pending_undelegations(state: BeaconState) -> None:
 #### New `process_pending_redelegations`
 ```python
 def process_pending_redelegations(state: BeaconState) -> None :
-    return
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    
+    for redelegate in state.pending_redelegations:
+        delegated_validator = get_delegated_validator(state, redelegate.target_pubkey)
+        if not delegated_validator:
+          break
+        if not is_validator_delegable(delegated_validator.validator):
+            break
+        
+        delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
+        if not delegator_index:
+            break
+        
+        if len(delegated_validator.delegators_quotas) < delegator_index:
+            break  
+        
+        if delegated_validator.delegators_quotas[delegator_index] == 0:
+            break
+    
+        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, undelegate.amount)
+        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+         
+        state.undelegations_exit_queue.append(
+          UndelegationExit(
+            amount=undelegate.amount,             
+            exit_queue_epoch=exit_queue_epoch, withdrawable_epoch=withdrawable_epoch, 
+            delegator_pubkey=undelegate.execution_address, validator_pubkey=undelegate.validator_pubkey))
+    state.pending_undelegations = []
 ```
 #### New `process_undelegations_exit_queue`
 
@@ -628,12 +656,16 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
             # the amount has been undelegated, we now check for withdrawability
             if current_epoch >= undelegation_exit.withdrawable_epoch:
                 # we can withdraw
-                if undelegation_exit.is_redelegation:
-                    # if is redelegation then pay validator fee and redelegate the undelegated amount to target val.
-                    settle_and_redelegate(undelegation_exit)
-                else:
-                    # pay validator fee and send undelegated amount to delegator
-                    settle_undelegation(undelegation_exit)
+                delegator_amount = settle_undelegation(undelegation_exit)
+            
+            if undelegation_exit.is_delegation:
+                state.pending_delegations.append(PendingDelegateRequest(
+                validator_pubkey = undelegation_exit.redelegate_to_validator_pubkey,
+                execution_address = undelegation_exit.delegator_pubkey,
+                amount = delegator_amount,
+                slot = state.slot
+              )) 
+            
             else:
                 # we can not withdraw, we postpone
                 postponed.append(undelegation_exit)

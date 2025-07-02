@@ -146,16 +146,11 @@ def undelegate_from_validator(undelegation_exit: UndelegationExit) -> (Gwei, Gwe
     
     return (amount_to_undelegate, total_delegated_at_withdrawal)
 ```
-#### New `settle_and_redelegate`
-```python
-def settle_and_redelegate(undelegation_exit: UndelegationExit) -> None:
-    return
-```
 
 #### New `settle_undelegation`
 
 ```python
-def settle_undelegation(undelegation_exit: UndelegationExit) -> None:
+def settle_undelegation(undelegation_exit: UndelegationExit) -> Gwei:
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
     
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
@@ -167,6 +162,10 @@ def settle_undelegation(undelegation_exit: UndelegationExit) -> None:
     validator_fee = undelegation_exit.amount * delegated_validator.fee_quotient
     delegator_amount =  undelegation_exit.amount - validator_fee
     
-    increase_delegator_balance(state, delegator_index, delegator_amount)
+    if not undelegation_exit.is_redelegation:  
+        increase_delegator_balance(state, delegator_index, delegator_amount)
+    
     increase_balance(state, ValidatorIndex(validator_index), validator_fee)
-```
+    
+    return delegator_amount
+ ```
