@@ -612,8 +612,10 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
             if current_epoch >= undelegation_exit.exit_queue_epoch:
                 # time to undelegate
                 undelegation_exit.exit_queue_epoch = FAR_FUTURE_EPOCH
-                undelegated_amount = undelegate_from_validator(undelegation_exit)
+                undelegated_amount, total_delegated_at_withdrawal = undelegate_from_validator(undelegation_exit)
                 undelegation_exit.amount = undelegated_amount
+                undelegation_exit.total_delegated_at_withdrawal = total_delegated_at_withdrawal
+               
                 # we postpone it, so we can test it for withdrawability next epoch
                 postponed.append(undelegation_exit)
                 continue
@@ -716,9 +718,9 @@ def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: G
     total_slashed_in_queue = 0
     
     for index in range(len(list_to_slash)):
-      exit_item = state.exit_queue[index]
+      exit_item = state.list_to_slash[index]
       
-      delegated_quota = exit_item.undelegated_amount / exit_item.total_delegated_at_withdrawal
+      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
       to_slash = delegated_quota * penalty
           
       total_slashed_in_queue += to_slash
