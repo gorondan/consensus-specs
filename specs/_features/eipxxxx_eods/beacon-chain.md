@@ -658,7 +658,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
                 # we can withdraw
                 delegator_amount = settle_undelegation(undelegation_exit)
             
-            if undelegation_exit.is_delegation:
+            if undelegation_exit.is_redelegation:
                 state.pending_delegations.append(PendingDelegateRequest(
                 validator_pubkey = undelegation_exit.redelegate_to_validator_pubkey,
                 execution_address = undelegation_exit.delegator_pubkey,
