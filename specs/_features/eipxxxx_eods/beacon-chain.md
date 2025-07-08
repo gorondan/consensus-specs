@@ -1,5 +1,3 @@
-from build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom build.lib.eth2spec.fulu.mainnet import BeaconStatefrom mypy.state import state
-
 # EIP-XXX_eODS -- The Beacon Chain
 
 ## Table of contents
@@ -607,7 +605,7 @@ def process_pending_redelegations(state: BeaconState) -> None :
         if not is_validator_delegable(delegated_validator.validator):
             break
         
-        delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
+        delegator_index = delegators_execution_addresses.index(redelegate.execution_address)
         if not delegator_index:
             break
         
@@ -616,16 +614,23 @@ def process_pending_redelegations(state: BeaconState) -> None :
         
         if delegated_validator.delegators_quotas[delegator_index] == 0:
             break
-    
-        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, undelegate.amount)
+        
+        # *Note:* A redelegation is composed of one undelegation followed by one delegation.
+        
+        # Calculates the redelegation's exit and withdrawability epoch before balance re-alocation to target validator
+        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
         withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-         
+        
+        # Appends the redelegation in the exit queue
         state.undelegations_exit_queue.append(
           UndelegationExit(
-            amount=undelegate.amount,             
-            exit_queue_epoch=exit_queue_epoch, withdrawable_epoch=withdrawable_epoch, 
-            delegator_pubkey=undelegate.execution_address, validator_pubkey=undelegate.validator_pubkey))
-    state.pending_undelegations = []
+            amount=redelegate.amount,             
+            exit_queue_epoch=exit_queue_epoch, 
+            withdrawable_epoch=withdrawable_epoch, 
+            delegator_pubkey=redelegate.execution_address, 
+            validator_pubkey=redelegate.validator_pubkey))
+        
+    state.pending_redelegations = []
 ```
 #### New `process_undelegations_exit_queue`
 
