@@ -617,11 +617,11 @@ def process_pending_redelegations(state: BeaconState) -> None :
         
         # *Note:* A redelegation is composed of one undelegation followed by one delegation.
         
-        # Calculates the redelegation's exit and withdrawability epoch before balance re-alocation to target validator
+        # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
         withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
         
-        # Appends the redelegation in the exit queue
+        # Appends the redelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
           UndelegationExit(
             amount=redelegate.amount,             
@@ -680,7 +680,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
 
 #### Modified process_rewards_and_penalties
 
-*Note*: The function `process_rewards_and_penalties` is modified to support the incentive accounting reforms.
+*Note*: The function `process_rewards_and_penalties` is modified to support delegation logic.
 
 ```python
 def process_rewards_and_penalties(state: BeaconState) -> None:
@@ -709,6 +709,8 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
 ```
 
 #### Modified `process_slashings`
+
+*Note*: The function `process_slashings` is modified to support delegation logic.
 
 ```python
 def process_slashings(state: BeaconState) -> None:
