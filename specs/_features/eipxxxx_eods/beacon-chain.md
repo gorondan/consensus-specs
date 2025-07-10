@@ -676,6 +676,8 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
 #### New `process_pending_withdrawals_from_delegators`
 ```python
 def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
+  withdrawals_to_postpone = []
+  
   delegators_execution_addresses = [d.execution_address for d in state.delegators]
   
   for withdraw_from_delegator in state.pending_withdrawals_from_delegators:
@@ -683,8 +685,14 @@ def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
     delegator = state.delegators[delegator_index]
     
     withdraw_amount = withdraw_from_delegator.amount
+    
     if is_withdrawable_from_delegator(state, delegator):
-       decrease_delegator_balance(state, delegator_index, withdraw_from_delegator) 
+       decrease_delegator_balance(state, delegator_index, withdraw_amount)
+    else:
+        withdrawals_to_postpone.append(withdraw_from_delegator)
+
+    state.pending_withdrawals_from_delegators = withdrawals_to_postpone
+
 ```
 #### Modified process_rewards_and_penalties
 
