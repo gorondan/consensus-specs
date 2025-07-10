@@ -43,6 +43,7 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
 
     num_delegated_balances = len(delegated_validator.delegated_balances)
 
+    # ensure we have enough indexes inside the delegated validator to keep them parallel with delegator_index 
     if(delegator_index > num_delegated_balances):
         for _ in range(delegator_index - num_delegated_balances):
             delegated_validator.delegated_balances.append(0)

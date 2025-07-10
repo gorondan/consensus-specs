@@ -143,7 +143,7 @@ class Delegator(Container):
 
 ```python
 class DelegatedValidator(Container):
-    delegated_validator: Validator
+    validator: Validator
     delegated_validator_quota: uint64
     delegators_quotas: List[Quota, DELEGATOR_REGISTRY_LIMIT]
     delegated_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]
@@ -160,7 +160,7 @@ class DelegationOperationRequest(Container):
     withdraw_credentials: Bytes32
     signature: BLSSignature
     amount: Gwei
-    source_address: ExecutionAddress
+    execution_address: ExecutionAddress
 ```
 
 #### `PendingActivateOperator`
@@ -339,20 +339,20 @@ def process_delegation_operation_request(state: BeaconState,
     if delegation_operation_request.type == ACTIVATE_OPERATOR_REQUEST_TYPE:
       state.pending_activate_operator.append(PendingActivateOperator(
           validator_pubkey=delegation_operation_request.target_pubkey,
-          source_address=delegation_operation_request.source_address,
+          execution_address=delegation_operation_request.execution_address,
           fee_quotient=delegation_operation_request.fee_quotient
       ))
     
     elif delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
         state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
-            execution_address = delegation_operation_request.execution_address,
+            execution_address=delegation_operation_request.execution_address,
             amount=delegation_operation_request.amount
         ))
         
     elif delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
       state.pending_delegations.append(PendingDelegateRequest(
         validator_pubkey=delegation_operation_request.target_pubkey,
-        execution_address = delegation_operation_request.execution_address,
+        execution_address=delegation_operation_request.execution_address,
         amount=delegation_operation_request.amount,
         slot=state.slot
       ))
@@ -450,42 +450,45 @@ def process_pending_deposits_to_delegate(state: BeaconState) -> None:
 ```python
 def process_pending_activate_operators(state: BeaconState) -> None:
     for pending_activation in state.pending_activate_operator:
+      # check if validator with given pubkey exists 
       validator_pubkeys = [v.pubkey for v in state.validators]
-      # Verify pubkey exists
       request_pubkey = pending_activation.validator_pubkey
       if request_pubkey not in validator_pubkeys:
-        return
+        break
+          
       validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
       validator = state.validators[validator_index]
 
       # Ensure the validator is not already an operator
       if validator.is_operator:
-        return
+        break
       
       # Verify withdrawal credentials
       has_correct_credential = has_compounding_withdrawal_credential(validator)
       is_correct_source_address = (
-              validator.withdrawal_credentials[12:] == pending_activation.source_address
+              validator.withdrawal_credentials[12:] == pending_activation.execution_address
       )
       if not (has_correct_credential and is_correct_source_address):
-        return
+        break
+          
       # Verify exit has not been initiated
       if validator.exit_epoch != FAR_FUTURE_EPOCH:
-        return
+        break
+          
       # Ensure the validator is not slashed
       if validator.slashed:
-        return
+        break
    
       validator.is_operator = True
       
       delegated_validator =  DelegatedValidator(
-      validator = validator,
-      delegated_validator_quota = 1,
-      delegators_quotas = [],
-      delegated_balances = [],
-      total_delegated_balance = 0,
-      fee_quotient = pending_activation.fee_quotient
-    ) 
+        validator = validator,
+        delegated_validator_quota = 1,
+        delegators_quotas = [],
+        delegated_balances = [],
+        total_delegated_balance = 0,
+        fee_quotient = pending_activation.fee_quotient
+      ) 
     state.delegated_validators.append(delegated_validator)
     state.pending_activate_operator = []
 ```
@@ -494,7 +497,6 @@ def process_pending_activate_operators(state: BeaconState) -> None:
 
 ```python
 def process_pending_delegations(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
     available_for_processing = get_activation_exit_churn_limit(state)
     processed_amount = 0
     delegations_to_postpone = []
@@ -505,8 +507,9 @@ def process_pending_delegations(state: BeaconState) -> None:
         
     for delegation in state.pending_delegations:
         delegated_amount = 0
+        requested_to_delegate = delegation.amount
         
-        # assert the registry contains the delegator and validator
+        # check if the registry contains the delegator and validator
         delegator_index = delegators_execution_addresses.index(delegation.execution_address)
         if not delegator_index:
             break
@@ -515,8 +518,11 @@ def process_pending_delegations(state: BeaconState) -> None:
         if not validator_index:
             break
 
-        if state.delegators_balance[delegator_index] < delegation.amount:
+        if state.delegators_balance[delegator_index] == 0:
           break
+            
+        if state.delegators_balance[delegator_index] < requested_to_delegate:
+          requested_to_delegate = state.delegators_balance[delegator_index]
 
         validator = state.validators[validator_index]
         
@@ -528,7 +534,7 @@ def process_pending_delegations(state: BeaconState) -> None:
             break
         
         # we can process the entire amount
-        if available_for_processing >= processed_amount + delegation.amount:
+        if available_for_processing >= processed_amount + requested_to_delegate:
           delegated_amount = delegation.amount
           
         # we can process a partial amount  
