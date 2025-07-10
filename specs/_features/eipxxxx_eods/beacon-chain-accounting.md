@@ -130,7 +130,7 @@ def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorInd
 #### New `undelegate_from_validator`
 
 ```python
-def undelegate_from_validator(undelegation_exit: UndelegationExit) -> (Gwei, Gwei):
+def undelegate_from_validator(state: BeaconState, undelegation_exit: UndelegationExit) -> (Gwei, Gwei):
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
     
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
@@ -154,7 +154,7 @@ def undelegate_from_validator(undelegation_exit: UndelegationExit) -> (Gwei, Gwe
 #### New `settle_undelegation`
 
 ```python
-def settle_undelegation(undelegation_exit: UndelegationExit) -> Gwei:
+def settle_undelegation(state: BeaconState, undelegation_exit: UndelegationExit) -> Gwei:
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
     
     delegators_execution_addresses = [d.execution_address for d in state.delegators]

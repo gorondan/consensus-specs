@@ -526,7 +526,7 @@ def process_pending_delegations(state: BeaconState) -> None:
 
         validator = state.validators[validator_index]
         
-        if not is_validator_delegable(validator):
+        if not is_validator_delegable(state, validator):
           break
         
         if delegation.slot > finalized_slot:
@@ -568,7 +568,7 @@ def process_pending_undelegations(state: BeaconState) -> None:
       delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
       if not delegated_validator:
         break
-      if not is_validator_delegable(delegated_validator.validator):
+      if not is_validator_delegable(state, delegated_validator.validator):
         break
   
       if len(delegated_validator.delegators_quotas) < delegator_index:
@@ -663,7 +663,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
             if current_epoch >= undelegation_exit.exit_queue_epoch:
                 # time to undelegate
                 undelegation_exit.exit_queue_epoch = FAR_FUTURE_EPOCH
-                undelegated_amount, total_delegated_at_withdrawal = undelegate_from_validator(undelegation_exit)
+                undelegated_amount, total_delegated_at_withdrawal = undelegate_from_validator(state, undelegation_exit)
                 undelegation_exit.amount = undelegated_amount
                 undelegation_exit.total_delegated_at_withdrawal = total_delegated_at_withdrawal
                
@@ -679,7 +679,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
             # the amount has been undelegated, we now check for withdrawability
             if current_epoch >= undelegation_exit.withdrawable_epoch:
                 # beacon-chain-accounting is called to settle undelegation
-                delegator_amount = settle_undelegation(undelegation_exit)
+                delegator_amount = settle_undelegation(state, undelegation_exit)
             
                 if undelegation_exit.is_redelegation:
                     # Appends the redelegation in the delegations activation queue
@@ -780,7 +780,7 @@ def process_slashings(state: BeaconState) -> None:
                 delegated_validator = get_delegated_validator(state, validator.pubkey)
               
                 validator_penalty = delegated_validator.delegated_validator_quota * rest_to_slash
-                delegators_penalty =  rest_to_slash - validator_slash
+                delegators_penalty =  rest_to_slash - validator_penalty
 
                 # slash the validator
                 decrease_balance(state, ValidatorIndex(index), validator_penalty)
@@ -840,7 +840,8 @@ def process_effective_balance_updates(state: BeaconState) -> None:
 #### New `is_validator_delegable`
 
 ```python
-def is_validator_delegable(validator: Validator) -> boolean:
+def is_validator_delegable(state:BeaconState, validator: Validator) -> boolean:
+    next_epoch = Epoch(get_current_epoch(state) + 1)
     if not validator:
         return False
     if validator.is_operator:
@@ -856,6 +857,17 @@ def is_validator_delegable(validator: Validator) -> boolean:
     
     return True
 ```
+
+#### New `get_validator_index_by_pubkey`
+
+```python
+def get_validator_index_by_pubkey(pubkey: BLSPubkey) -> ValidatorIndex:
+    validator_pubkeys = [v.pubkey for v in state.validators]
+    validator_index = ValidatorIndex(validator_pubkeys.index(pubkey))
+    
+    return validator_index
+```
+
 
 #### Modified `process_epoch`
 
@@ -915,25 +927,6 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 ```
 
 ##### Deposits
-
-###### New `is_valid_deposit_signature`
-
-```python
-def is_valid_deposit_to_delegate_signature(pubkey: BLSPubkey,
-                                           withdrawal_credentials: Bytes32,
-                                           amount: uint64,
-                                           signature: BLSSignature) -> bool:
-    deposit_to_delegate_message = DepositToDelegateMessage(
-        pubkey=pubkey,
-        withdrawal_credentials=withdrawal_credentials,
-        amount=amount,
-    )
-    domain = compute_domain(
-        DOMAIN_DEPOSIT_TO_DELEGATE)  # Fork-agnostic domain since delegation deposits are valid across forks
-    signing_root = compute_signing_root(deposit_to_delegate_message, domain)
-    return bls.Verify(pubkey, signing_root, signature)
-```
-
 ###### New `is_withdrawable_from_delegator`
 
 ```python

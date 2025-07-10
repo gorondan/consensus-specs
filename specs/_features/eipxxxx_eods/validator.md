@@ -15,7 +15,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
         DEPOSIT_REQUEST_TYPE,
         WITHDRAWAL_REQUEST_TYPE,
         CONSOLIDATION_REQUEST_TYPE,
-        DELEGATION_OPERATION_REQUEST_TYPE
+        DELEGATION_OPERATIONS_REQUEST_TYPE
     ]
 
     prev_request_type = None
