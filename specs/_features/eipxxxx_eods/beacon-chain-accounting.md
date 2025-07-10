@@ -36,7 +36,7 @@ enshrined delegation balances, withdrawal processing, and reward preview computa
 
 ```python
 def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, validator_pubkey: BLSPubkey, delegated_amount: Gwei) -> None:
-    # state, delegator_index, validator.pubkey, delegated_amount
+    # here we decrement the delegators available balance
     decrease_delegator_balance(state, delegator_index, delegated_amount)
     
     delegated_validator = get_delegated_validator(state, validator_pubkey)
@@ -48,11 +48,14 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
             delegated_validator.delegated_balances.append(0)
             delegated_validator.delegated_quotas.append(0)
     
+    # here we increase the delegated balance from this specific delegator, under this delegated validator, with delegated amount
     delegated_validator.delegated_balances[delegator_index] += delegated_amount
+    
+    # here we increase the delegated validator's total delegated balance with delegated amount
     delegated_validator.total_delegated_balance += delegated_amount
-
+    
+    # here we recalculate delegators' quotas under this delegated validator  
     recalculate_delegators_quotas(state, delegated_validator)
-
 ```
 
 ### Accounting helper functions

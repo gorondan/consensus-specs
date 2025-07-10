@@ -369,7 +369,7 @@ def process_delegation_operation_request(state: BeaconState,
       state.pending_redelegate.append(PendingRedelegateRequest(
         source_pubkey=delegation_operation_request.source_pubkey,
         target_pubkey=delegation_operation_request.target_pubkey,
-        execution_address=delegation_operation_request.execution_address,
+        execution_address=delegation_operation_request.execution_address,  
         amount=delegation_operation_request.amount
       ))
         
@@ -508,23 +508,15 @@ def process_pending_delegations(state: BeaconState) -> None:
         
     for delegation in state.pending_delegations:
         delegated_amount = 0
-        has_delegator = False
-        has_validator = False
-
+        
+        # assert the registry contains the delegator and validator
         delegator_index = delegators_execution_addresses.index(delegation.execution_address)
-
-        if delegator_index:
-          has_delegator = True
-
+        if not delegator_index:
+            break
+        
         validator_index = validator_pubkeys.index(delegation.validator_pubkey)
-           
-        if validator_index:
-          has_validator = True
-
-        if not has_delegator or not has_validator:
-          break  
-            
-        # here we have delegator and validator
+        if not validator_index:
+            break
 
         if state.delegators_balance[delegator_index] < delegation.amount:
           break
@@ -551,7 +543,7 @@ def process_pending_delegations(state: BeaconState) -> None:
             delegations_to_postpone.append(delegation)
             break
 
-        # here we decrement the delegators available balance
+        # here beacon-chain-accounting is called to delegate amount to validator
         delegate_to_validator(state, delegator_index, validator.pubkey, delegated_amount)
         
         processed_amount += delegated_amount
@@ -798,11 +790,10 @@ def process_effective_balance_updates(state: BeaconState) -> None:
 
 ```python
 def is_validator_delegable(validator: Validator) -> boolean:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
-    
+
     if not validator:
         return False
-    if validator.is_operator:
+    if validator.is_operator:F
         return False
     if validator.exit_epoch < FAR_FUTURE_EPOCH:
       return False
