@@ -555,37 +555,45 @@ def process_pending_delegations(state: BeaconState) -> None:
 
 ```python
 def process_pending_undelegations(state: BeaconState) -> None:
-    delegators_execution_addresses = [d.execution_address for d in state.delegators]
-    
-    for undelegate in state.pending_undelegations:
-        delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
-        if not delegated_validator:
-          break
-        if not is_validator_delegable(delegated_validator.validator):
-            break
+  delegators_execution_addresses = [d.execution_address for d in state.delegators]
+
+  for undelegate in state.pending_undelegations:
+    delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
+    if not delegated_validator:
+      break
+    if not is_validator_delegable(delegated_validator.validator):
+      break
+
+    delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
+    if not delegator_index:
+      break
+
+    if len(delegated_validator.delegators_quotas) < delegator_index:
+      break
+
+    if delegated_validator.delegators_quotas[delegator_index] == 0:
+      break
+
+    # Calculates the undelegation's exit and withdrawability epochs
+    exit_queue_epoch = compute_exit_epoch_and_update_churn(state, undelegate.amount)
+    withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+
+    # Appends the undelegation in the undelegation exit queue
+    state.undelegations_exit_queue.append(
+      UndelegationExit(
+        amount=undelegate.amount,
+        exit_queue_epoch=exit_queue_epoch,
+        withdrawable_epoch=withdrawable_epoch,
+        delegator_pubkey=undelegate.execution_address,
+        validator_pubkey=undelegate.validator_pubkey))
         
-        delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
-        if not delegator_index:
-            break
-        
-        if len(delegated_validator.delegators_quotas) < delegator_index:
-            break  
-        
-        if delegated_validator.delegators_quotas[delegator_index] == 0:
-            break
-    
-        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, undelegate.amount)
-        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-         
-        state.undelegations_exit_queue.append(
-          UndelegationExit(
-            amount=undelegate.amount,             
-            exit_queue_epoch=exit_queue_epoch, withdrawable_epoch=withdrawable_epoch, 
-            delegator_pubkey=undelegate.execution_address, validator_pubkey=undelegate.validator_pubkey))
-    state.pending_undelegations = []
+  state.pending_undelegations = []
 ```
 
 #### New `process_pending_redelegations`
+
+*Note:* A redelegation is composed of one undelegation followed by one delegation.
+
 ```python
 def process_pending_redelegations(state: BeaconState) -> None :
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
@@ -606,8 +614,6 @@ def process_pending_redelegations(state: BeaconState) -> None :
         
         if delegated_validator.delegators_quotas[delegator_index] == 0:
             break
-        
-        # *Note:* A redelegation is composed of one undelegation followed by one delegation.
         
         # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
@@ -652,10 +658,11 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
         else:
             # the amount has been undelegated, we now check for withdrawability
             if current_epoch >= undelegation_exit.withdrawable_epoch:
-                # we can withdraw
+                # beacon-chain-accounting is called to settle undelegation
                 delegator_amount = settle_undelegation(undelegation_exit)
             
             if undelegation_exit.is_redelegation:
+                # Appends the redelegation in the delegations activation queue
                 state.pending_delegations.append(PendingDelegateRequest(
                 validator_pubkey = undelegation_exit.redelegate_to_validator_pubkey,
                 execution_address = undelegation_exit.delegator_pubkey,
