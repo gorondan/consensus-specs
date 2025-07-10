@@ -365,7 +365,7 @@ def process_delegation_operation_request(state: BeaconState,
       ))
         
     elif delegation_operation_request.type == REDELEGATE_REQUEST_TYPE:
-      state.pending_redelegate.append(PendingRedelegateRequest(
+      state.pending_redelegations.append(PendingRedelegateRequest(
         source_pubkey=delegation_operation_request.source_pubkey,
         target_pubkey=delegation_operation_request.target_pubkey,
         execution_address=delegation_operation_request.execution_address,  
@@ -607,21 +607,30 @@ def process_pending_redelegations(state: BeaconState) -> None :
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
     
     for redelegate in state.pending_redelegations:
-        delegated_validator = get_delegated_validator(state, redelegate.target_pubkey)
-        if not delegated_validator:
+        # we check if the target is valid
+        target_delegated_validator = get_delegated_validator(state, redelegate.target_pubkey)
+        if not target_delegated_validator:
           break
-        if not is_validator_delegable(delegated_validator.validator):
-            break
+       
+        # we check if the source is valid   
+        source_delegated_validator = get_delegated_validator(state, redelegate.source_pubkey)
+        if not source_delegated_validator:
+          break
         
         delegator_index = delegators_execution_addresses.index(redelegate.execution_address)
         if not delegator_index:
             break
         
-        if len(delegated_validator.delegators_quotas) < delegator_index:
+        # check if delegator has a delegation in the source delegated validator    
+        if len(source_delegated_validator.delegators_quotas) < delegator_index:
             break  
-        
-        if delegated_validator.delegators_quotas[delegator_index] == 0:
+        if source_delegated_validator.delegators_quotas[delegator_index] == 0:
             break
+         
+        # we cap the requested amount to avoid a malicious request which can fill up the churn    
+        requested_to_redelegate = redelegate.amount  
+        if source_delegated_validator.delegated_balances[delegator_index] < requested_to_redelegate:
+            requested_to_redelegate = source_delegated_validator.delegated_balances[delegator_index]    
         
         # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
@@ -630,11 +639,14 @@ def process_pending_redelegations(state: BeaconState) -> None :
         # Appends the redelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
           UndelegationExit(
-            amount=redelegate.amount,             
+            amount=requested_to_redelegate,             
             exit_queue_epoch=exit_queue_epoch, 
             withdrawable_epoch=withdrawable_epoch, 
-            delegator_pubkey=redelegate.execution_address, 
-            validator_pubkey=redelegate.validator_pubkey))
+            execution_address=redelegate.execution_address, 
+            validator_pubkey=redelegate.source_pubkey,
+            is_redelegation=True,
+            redelegate_to_validator_pubkey=redelegate.target_pubkey
+          ))
         
     state.pending_redelegations = []
 ```
