@@ -158,7 +158,7 @@ def settle_undelegation(undelegation_exit: UndelegationExit) -> Gwei:
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
     
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
-    delegator_index = DelegatorIndex(delegators_execution_addresses.index(undelegation_exit.delegator_pubkey))
+    delegator_index = DelegatorIndex(delegators_execution_addresses.index(undelegation_exit.execution_address))
     
     validator_pubkeys = [v.pubkey for v in state.validators]
     validator_index = ValidatorIndex(validator_pubkeys.index(undelegation_exit.validator_pubkey))
