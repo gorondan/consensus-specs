@@ -373,7 +373,7 @@ def process_delegation_operation_request(state: BeaconState,
       ))
         
     elif delegation_operation_request.type == WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE:
-      state.pending_withdraw_from_delegator.append(PendingWithdrawFromDelegatorRequest(
+      state.pending_withdrawals_from_delegators.append(PendingWithdrawFromDelegatorRequest(
         execution_address=delegation_operation_request.execution_address,  
         amount=delegation_operation_request.amount
       )) 
@@ -698,6 +698,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
 ```
 
 #### New `process_pending_withdrawals_from_delegators`
+
 ```python
 def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
   withdrawals_to_postpone = []
@@ -709,6 +710,8 @@ def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
     delegator = state.delegators[delegator_index]
     
     withdraw_amount = withdraw_from_delegator.amount
+    if withdraw_amount > state.delegators_balances[delegator_index]:
+      withdraw_amount = state.delegators_balances[delegator_index]
     
     if is_withdrawable_from_delegator(state, delegator):
        decrease_delegator_balance(state, delegator_index, withdraw_amount)
@@ -873,6 +876,7 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
     process_pending_redelegations(state)  # [New in EIPXXXX_eODS]
     process_undelegations_exit_queue(state)  # [New in EIPXXXX_eODS]
+    process_pending_withdrawals_from_delegators(state)  # [New in EIPXXXX_eODS]
     #process_undel(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
