@@ -220,9 +220,9 @@ class PendingWithdrawFromDelegatorRequest(Container):
 
 ```python
 class UndelegationExit(Container):
-  undelegated_amount: Gwei
+  amount: Gwei
   total_delegated_at_withdrawal: Gwei
-  delegator_pubkey: BLSPubkey
+  execution_address: BLSPubkey
   validator_pubkey: BLSPubkey
   exit_queue_epoch: Epoch
   withdrawable_epoch: Epoch
@@ -561,14 +561,14 @@ def process_pending_undelegations(state: BeaconState) -> None:
   delegators_execution_addresses = [d.execution_address for d in state.delegators]
 
   for undelegate in state.pending_undelegations:
+    delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
+    if not delegator_index:
+      break
+        
     delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
     if not delegated_validator:
       break
     if not is_validator_delegable(delegated_validator.validator):
-      break
-
-    delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
-    if not delegator_index:
       break
 
     if len(delegated_validator.delegators_quotas) < delegator_index:
@@ -576,18 +576,23 @@ def process_pending_undelegations(state: BeaconState) -> None:
 
     if delegated_validator.delegators_quotas[delegator_index] == 0:
       break
+        
+    # we cap the requested amount to avoid a malicious request which can fill up the churn    
+    requested_to_undelegate = undelegate.amount  
+    if delegated_validator.delegated_balances[delegator_index] < requested_to_undelegate:
+      requested_to_undelegate = delegated_validator.delegated_balances[delegator_index]
 
     # Calculates the undelegation's exit and withdrawability epochs
-    exit_queue_epoch = compute_exit_epoch_and_update_churn(state, undelegate.amount)
+    exit_queue_epoch = compute_exit_epoch_and_update_churn(state, requested_to_undelegate)
     withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
     # Appends the undelegation in the undelegation exit queue
     state.undelegations_exit_queue.append(
       UndelegationExit(
-        amount=undelegate.amount,
+        amount=requested_to_undelegate,
         exit_queue_epoch=exit_queue_epoch,
         withdrawable_epoch=withdrawable_epoch,
-        delegator_pubkey=undelegate.execution_address,
+        execution_address=undelegate.execution_address,
         validator_pubkey=undelegate.validator_pubkey))
         
   state.pending_undelegations = []
