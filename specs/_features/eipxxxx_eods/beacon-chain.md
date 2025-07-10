@@ -669,14 +669,14 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
                 # beacon-chain-accounting is called to settle undelegation
                 delegator_amount = settle_undelegation(undelegation_exit)
             
-            if undelegation_exit.is_redelegation:
-                # Appends the redelegation in the delegations activation queue
-                state.pending_delegations.append(PendingDelegateRequest(
-                validator_pubkey = undelegation_exit.redelegate_to_validator_pubkey,
-                execution_address = undelegation_exit.delegator_pubkey,
-                amount = delegator_amount,
-                slot = state.slot
-              )) 
+                if undelegation_exit.is_redelegation:
+                    # Appends the redelegation in the delegations activation queue
+                    state.pending_delegations.append(PendingDelegateRequest(
+                      validator_pubkey=undelegation_exit.redelegate_to_validator_pubkey,
+                      execution_address=undelegation_exit.execution_address,
+                      amount=delegator_amount,
+                      slot = state.slot
+                    )) 
             
             else:
                 # we can not withdraw, we postpone
@@ -684,6 +684,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
               
     state.undelegations_exit_queue = postponed
 ```
+
 #### New `process_pending_withdrawals_from_delegators`
 ```python
 def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
