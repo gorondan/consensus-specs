@@ -212,8 +212,7 @@ class PendingRedelegateRequest(Container):
 
 ```python
 class PendingWithdrawFromDelegatorRequest(Container):
-  pubkey: BLSPubkey
-  signature: BLSSignature
+  execution_address: ExecutionAddress
   amount: Gwei
 ```
 
@@ -375,9 +374,7 @@ def process_delegation_operation_request(state: BeaconState,
         
     elif delegation_operation_request.type == WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE:
       state.pending_withdraw_from_delegator.append(PendingWithdrawFromDelegatorRequest(
-        source_pubkey=delegation_operation_request.source_pubkey,
-        target_pubkey=delegation_operation_request.target_pubkey,
-        signature=delegation_operation_request.signature,
+        execution_address=delegation_operation_request.execution_address,  
         amount=delegation_operation_request.amount
       )) 
 ```
@@ -676,7 +673,19 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
               
     state.undelegations_exit_queue = postponed
 ```
-
+#### New `process_pending_withdrawals_from_delegators`
+```python
+def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
+  delegators_execution_addresses = [d.execution_address for d in state.delegators]
+  
+  for withdraw_from_delegator in state.pending_withdrawals_from_delegators:
+    delegator_index = delegators_execution_addresses.index(withdraw_from_delegator.execution_address)
+    delegator = state.delegators[delegator_index]
+    
+    withdraw_amount = withdraw_from_delegator.amount
+    if is_withdrawable_from_delegator(state, delegator):
+       decrease_delegator_balance(state, delegator_index, withdraw_from_delegator) 
+```
 #### Modified process_rewards_and_penalties
 
 *Note*: The function `process_rewards_and_penalties` is modified to support delegation logic.
@@ -832,6 +841,7 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
     process_pending_redelegations(state)  # [New in EIPXXXX_eODS]
     process_undelegations_exit_queue(state)  # [New in EIPXXXX_eODS]
+    #process_undel(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
