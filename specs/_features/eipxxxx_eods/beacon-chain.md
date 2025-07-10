@@ -843,7 +843,7 @@ def process_effective_balance_updates(state: BeaconState) -> None:
 def is_validator_delegable(validator: Validator) -> boolean:
     if not validator:
         return False
-    if validator.is_operator:F
+    if validator.is_operator:
         return False
     if validator.exit_epoch < FAR_FUTURE_EPOCH:
       return False
