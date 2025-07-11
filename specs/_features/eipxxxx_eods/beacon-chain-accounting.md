@@ -1,38 +1,36 @@
+# EIP-XXX_eODS -- Beacon Chain Accounting
+
+## Table of contents
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [EIP-XXX_eODS -- Beacon Chain Accounting](#eip-xxx_eods----beacon-chain-accounting)
-  - [Introduction](#introduction)
-  - [Delegation Lifecycle Functions](#delegation-lifecycle-functions)
-    - [delegate_to_validator](#delegate_to_validator)
-    - [Accounting helper functions](#accounting-helper-functions)
-      - [New `recalculate_delegators_quotas`](#new-recalculate_delegators_quotas)
-      - [New `apply_delegations_rewards`](#new-apply_delegations_rewards)
-      - [New `apply_delegations_penalties`](#new-apply_delegations_penalties)
-      - [New `apply_delegations_slashing`](#new-apply_delegations_slashing)
-  - [Advanced Delegation Lifecycle](#advanced-delegation-lifecycle)
-    - [Beacon state mutators](#beacon-state-mutators)
-      - [New `decrease_delegator_balance`](#new-decrease_delegator_balance)
-      - [New `increase_delegator_balance`](#new-increase_delegator_balance)
-      - [New `undelegate_from_validator`](#new-undelegate_from_validator)
-      - [New `settle_undelegation`](#new-settle_undelegation)
+- [Introduction](#introduction)
+- [Delegation Lifecycle Functions](#delegation-lifecycle-functions)
+  - [New `delegate_to_validator`](#new-delegate_to_validator)
+  - [New `undelegate_from_validator`](#new-undelegate_from_validator)
+  - [New `settle_undelegation`](#new-settle_undelegation)
+- [Accounting helper functions](#accounting-helper-functions)
+  - [New `recalculate_delegators_quotas`](#new-recalculate_delegators_quotas)
+  - [New `apply_delegations_rewards`](#new-apply_delegations_rewards)
+  - [New `apply_delegations_penalties`](#new-apply_delegations_penalties)
+  - [New `apply_delegations_slashing`](#new-apply_delegations_slashing)
+  - [Beacon state mutators](#beacon-state-mutators)
+    - [New `decrease_delegator_balance`](#new-decrease_delegator_balance)
+    - [New `increase_delegator_balance`](#new-increase_delegator_balance)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-from bla2 import UndelegationExitfrom build.lib.eth2spec.test.helpers.state import get_validator_index_by_pubkeyfrom build.lib.eth2spec.eipxxxx_eods.mainnet import decrease_balancefrom build.lib.eth2spec.fulu.mainnet import BLSPubkeyfrom eth2spec.eipxxxx_eods.mainnet import DelegatorIndex
-
-# EIP-XXX_eODS -- Beacon Chain Accounting
 
 ## Introduction
 
 *Note:* This specification is built upon [Electra](../../electra/beacon_chain.md) and is under active development.  
 This specification defines the accounting logic for eODS (Enshrined Operator-Delegator Separation), responsible for 
-enshrined delegation balances, withdrawal processing, and reward preview computation in the Beacon Chain.
+enshrined delegation operations processing.
 
 ## Delegation Lifecycle Functions
 
-### delegate_to_validator
+### New `delegate_to_validator`
 
 ```python
 def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, validator_pubkey: BLSPubkey, delegated_amount: Gwei) -> None:
@@ -58,76 +56,7 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
     # here we recalculate delegators' quotas under this delegated validator  
     recalculate_delegators_quotas(state, delegated_validator)
 ```
-
-### Accounting helper functions
-
-#### New `recalculate_delegators_quotas`
-```python
-def recalculate_delegators_quotas(state: BeaconState, delegated_validator: DelegatedValidator) -> None:
-    validator_index = get_validator_index_by_pubkey(delegated_validator.validator.pubkey)
-    
-    if delegated_validator.total_delegated_balance == 0:
-        delegated_validator.delegated_validator_quota = 1
-    else :
-        delegated_validator.delegated_validator_quota = (state.balances[validator_index] /  (delegated_validator.total_delegated_balance + state.balances[validator_index]))
-        for index in range(len(delegated_validator.delegators_quotas)):
-            delegated_validator.delegators_quotas[index] = delegated_validator.delegated_balances[index] / delegated_validator.total_delegated_balance * (1-delegated_validator.delegated_validator_quota)
-``` 
-#### New `apply_delegations_rewards`
-
-```python
-def apply_delegations_rewards(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
-    delegated_validator.total_delegated_balance += amount
-    
-    for index in range(len(delegated_validator.delegators_quotas)):
-        delegated_validator.delegated_balances[index] += amount * delegated_validator.delegators_quotas[index]
-```
-
-#### New `apply_delegations_penalties`
-
-```python
-def apply_delegations_penalties(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
-    delegated_validator.total_delegated_balance -= amount
-    
-    for index in range(len(delegated_validator.delegators_quotas)):
-        delegated_validator.delegated_balances[index] -= amount * delegated_validator.delegators_quotas[index]
-```
-
-#### New `apply_delegations_slashing`
-
-```python
-def apply_delegations_slashing(delegated_validator: DelegatedValidator, penalty: Gwei, )-> None:
-    delegated_validator.total_delegated_balance -= penalty
-    
-    # slash the delegated balances
-    for index in range(len(delegated_validator.delegated_balances)):
-        delegated_validator.delegated_balances[index] -= penalty * delegated_validator.delegators_quotas[index]
-  ```
-
-## Advanced Delegation Lifecycle
-
-### Beacon state mutators
-
-#### New `decrease_delegator_balance`
-
-```python
-def decrease_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
-    """
-    Decrease the delegator balance at index ``delegator_index`` by ``delta``.
-    """
-    state.delegators_balances[delegator_index] -= delta
-```
-#### New `increase_delegator_balance`
-
-```python
-def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
-    """
-    Increase the delegator balance at index ``delegator_index`` by ``delta``.
-    """
-    state.delegators_balances[delegator_index] += delta
-```
-
-#### New `undelegate_from_validator`
+### New `undelegate_from_validator`
 
 ```python
 def undelegate_from_validator(state: BeaconState, undelegation_exit: UndelegationExit) -> (Gwei, Gwei):
@@ -151,7 +80,7 @@ def undelegate_from_validator(state: BeaconState, undelegation_exit: Undelegatio
     return (amount_to_undelegate, total_delegated_at_withdrawal)
 ```
 
-#### New `settle_undelegation`
+### New `settle_undelegation`
 
 ```python
 def settle_undelegation(state: BeaconState, undelegation_exit: UndelegationExit) -> Gwei:
@@ -173,3 +102,70 @@ def settle_undelegation(state: BeaconState, undelegation_exit: UndelegationExit)
     
     return delegator_amount
  ```
+
+## Accounting helper functions
+
+### New `recalculate_delegators_quotas`
+```python
+def recalculate_delegators_quotas(state: BeaconState, delegated_validator: DelegatedValidator) -> None:
+    validator_index = get_validator_index_by_pubkey(delegated_validator.validator.pubkey)
+    
+    if delegated_validator.total_delegated_balance == 0:
+        delegated_validator.delegated_validator_quota = 1
+    else :
+        delegated_validator.delegated_validator_quota = (state.balances[validator_index] /  (delegated_validator.total_delegated_balance + state.balances[validator_index]))
+        for index in range(len(delegated_validator.delegators_quotas)):
+            delegated_validator.delegators_quotas[index] = delegated_validator.delegated_balances[index] / delegated_validator.total_delegated_balance * (1-delegated_validator.delegated_validator_quota)
+``` 
+
+### New `apply_delegations_rewards`
+
+```python
+def apply_delegations_rewards(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
+    delegated_validator.total_delegated_balance += amount
+    
+    for index in range(len(delegated_validator.delegators_quotas)):
+        delegated_validator.delegated_balances[index] += amount * delegated_validator.delegators_quotas[index]
+```
+
+### New `apply_delegations_penalties`
+
+```python
+def apply_delegations_penalties(amount: Gwei, delegated_validator: DelegatedValidator)-> None:
+    delegated_validator.total_delegated_balance -= amount
+    
+    for index in range(len(delegated_validator.delegators_quotas)):
+        delegated_validator.delegated_balances[index] -= amount * delegated_validator.delegators_quotas[index]
+```
+
+### New `apply_delegations_slashing`
+
+```python
+def apply_delegations_slashing(delegated_validator: DelegatedValidator, penalty: Gwei, )-> None:
+    delegated_validator.total_delegated_balance -= penalty
+    
+    # slash the delegated balances
+    for index in range(len(delegated_validator.delegated_balances)):
+        delegated_validator.delegated_balances[index] -= penalty * delegated_validator.delegators_quotas[index]
+  ```
+
+### Beacon state mutators
+
+#### New `decrease_delegator_balance`
+
+```python
+def decrease_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
+    """
+    Decrease the delegator balance at index ``delegator_index`` by ``delta``.
+    """
+    state.delegators_balances[delegator_index] -= delta
+```
+#### New `increase_delegator_balance`
+
+```python
+def increase_delegator_balance(state: BeaconState, delegator_index: DelegatorIndex, delta: Gwei) -> None:
+    """
+    Increase the delegator balance at index ``delegator_index`` by ``delta``.
+    """
+    state.delegators_balances[delegator_index] += delta
+```
