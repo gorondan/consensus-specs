@@ -8,56 +8,56 @@
 - [Introduction](#introduction)
 - [Custom types](#custom-types)
 - [Preset](#preset)
-  - [Execution](#execution)
-  - [State list lengths](#state-list-lengths)
+    - [Execution](#execution)
+    - [State list lengths](#state-list-lengths)
 - [Constants](#constants)
-  - [Execution layer triggered requests](#execution-layer-triggered-requests)
-  - [Execution layer triggered delegation requests](#execution-layer-triggered-delegation-requests)
-  - [Domain types](#domain-types)
+    - [Execution layer triggered requests](#execution-layer-triggered-requests)
+    - [Execution layer triggered delegation requests](#execution-layer-triggered-delegation-requests)
+    - [Domain types](#domain-types)
 - [Configuration](#configuration)
-  - [Time parameters](#time-parameters)
+    - [Time parameters](#time-parameters)
 - [Containers](#containers)
-  - [New containers](#new-containers)
-    - [`Delegator`](#delegator)
-    - [`DelegatedValidator`](#delegatedvalidator)
-    - [`DelegationOperationRequest`](#delegationoperationrequest)
-    - [`PendingActivateOperator`](#pendingactivateoperator)
-    - [`PendingDepositToDelegate`](#pendingdeposittodelegate)
-    - [`PendingDelegateRequest`](#pendingdelegaterequest)
-    - [`PendingUndelegateRequest`](#pendingundelegaterequest)
-    - [`PendingRedelegateRequest`](#pendingredelegaterequest)
-    - [`PendingWithdrawFromDelegatorRequest`](#pendingwithdrawfromdelegatorrequest)
-    - [`UndelegationExit`](#undelegationexit)
-  - [Modified containers](#modified-containers)
-    - [`ExecutionRequests`](#executionrequests)
-    - [`Validator`](#validator)
-    - [`BeaconState`](#beaconstate)
+    - [New containers](#new-containers)
+        - [`Delegator`](#delegator)
+        - [`DelegatedValidator`](#delegatedvalidator)
+        - [`DelegationOperationRequest`](#delegationoperationrequest)
+        - [`PendingActivateOperator`](#pendingactivateoperator)
+        - [`PendingDepositToDelegate`](#pendingdeposittodelegate)
+        - [`PendingDelegateRequest`](#pendingdelegaterequest)
+        - [`PendingUndelegateRequest`](#pendingundelegaterequest)
+        - [`PendingRedelegateRequest`](#pendingredelegaterequest)
+        - [`PendingWithdrawFromDelegatorRequest`](#pendingwithdrawfromdelegatorrequest)
+        - [`UndelegationExit`](#undelegationexit)
+    - [Modified containers](#modified-containers)
+        - [`ExecutionRequests`](#executionrequests)
+        - [`Validator`](#validator)
+        - [`BeaconState`](#beaconstate)
 - [Beacon chain state transition function](#beacon-chain-state-transition-function)
-  - [Block processing](#block-processing)
-    - [New `process_delegation_operation_request`](#new-process_delegation_operation_request)
-    - [Execution payload](#execution-payload)
-      - [Modify `get_execution_requests_list`](#modify-get_execution_requests_list)
+    - [Block processing](#block-processing)
+        - [New `process_delegation_operation_request`](#new-process_delegation_operation_request)
+        - [Execution payload](#execution-payload)
+            - [Modify `get_execution_requests_list`](#modify-get_execution_requests_list)
 - [Helper functions](#helper-functions)
-  - [Delegation helper functions](#delegation-helper-functions)
-    - [New `register_new_delegator`](#new-register_new_delegator)
-    - [New `get_delegated_validator`](#new-get_delegated_validator)
-  - [Beacon state mutators](#beacon-state-mutators)
-  - [Epoch processing](#epoch-processing)
-    - [New `process_pending_deposits_to_delegate`](#new-process_pending_deposits_to_delegate)
-    - [New `process_pending_activate_operators`](#new-process_pending_activate_operators)
-    - [New `process_pending_delegations`](#new-process_pending_delegations)
-    - [New `process_pending_undelegations`](#new-process_pending_undelegations)
-    - [New `process_undelegations_exit_queue`](#new-process_undelegations_exit_queue)
-    - [Modified process_rewards_and_penalties](#modified-process_rewards_and_penalties)
-    - [Modified `process_slashings`](#modified-process_slashings)
-    - [Modified `process_effective_balance_updates`](#modified-process_effective_balance_updates)
-    - [New `is_validator_delegable`](#new-is_validator_delegable)
-    - [Modified `process_epoch`](#modified-process_epoch)
-    - [Operations](#operations)
-      - [Modified `process_operations`](#modified-process_operations)
-      - [Deposits](#deposits)
-        - [New `is_valid_deposit_signature`](#new-is_valid_deposit_signature)
-        - [New `is_withdrawable_from_delegator`](#new-is_withdrawable_from_delegator)
+    - [Delegation helper functions](#delegation-helper-functions)
+        - [New `register_new_delegator`](#new-register_new_delegator)
+        - [New `get_delegated_validator`](#new-get_delegated_validator)
+    - [Beacon state mutators](#beacon-state-mutators)
+    - [Epoch processing](#epoch-processing)
+        - [New `process_pending_deposits_to_delegate`](#new-process_pending_deposits_to_delegate)
+        - [New `process_pending_activate_operators`](#new-process_pending_activate_operators)
+        - [New `process_pending_delegations`](#new-process_pending_delegations)
+        - [New `process_pending_undelegations`](#new-process_pending_undelegations)
+        - [New `process_undelegations_exit_queue`](#new-process_undelegations_exit_queue)
+        - [Modified process_rewards_and_penalties](#modified-process_rewards_and_penalties)
+        - [Modified `process_slashings`](#modified-process_slashings)
+        - [Modified `process_effective_balance_updates`](#modified-process_effective_balance_updates)
+        - [New `is_validator_delegable`](#new-is_validator_delegable)
+        - [Modified `process_epoch`](#modified-process_epoch)
+        - [Operations](#operations)
+            - [Modified `process_operations`](#modified-process_operations)
+            - [Deposits](#deposits)
+                - [New `is_valid_deposit_signature`](#new-is_valid_deposit_signature)
+                - [New `is_withdrawable_from_delegator`](#new-is_withdrawable_from_delegator)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -81,9 +81,10 @@ without dynamic validator selection or delegator governance.
 
 ### Execution
 
-| Name                                             | Value                     | Description                                                                                              |
-|--------------------------------------------------|---------------------------|----------------------------------------------------------------------------------------------------------|
-| `MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD` | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS]* Maximum number of execution layer delegation operations requests in each payload |
+| Name                                                 | Value                     | Description                                                                                              |
+|------------------------------------------------------|---------------------------|----------------------------------------------------------------------------------------------------------|
+| `MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD`     | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS]* Maximum number of execution layer delegation operations requests in each payload |
+| `MAX_PENDING_WITHDRAWALS_FROM_DELEGATOR_PER_PAYLOAD` | `uint64(2**4)` (= 16)     | *[New in EIPXXXX_eODS* Maximum number of withdraw from delegate operations requests in each payload      |
 
 ### Gwei values
 
@@ -150,6 +151,7 @@ class DelegatedValidator(Container):
     total_delegated_balance: Gwei
     fee_quotient: uint64
 ```
+
 #### `DelegationOperationRequest`
 
 ```python
@@ -171,11 +173,12 @@ class PendingActivateOperator(Container):
     fee_quotient: uint64
     source_address: ExecutionAddress
 ```
+
 #### `PendingDepositToDelegate`
 
 ```python
 class PendingDepositToDelegate(Container):
-    execution_address:ExecutionAddress
+    execution_address: ExecutionAddress
     amount: Gwei
 ```
 
@@ -183,10 +186,10 @@ class PendingDepositToDelegate(Container):
 
 ```python
 class PendingDelegateRequest(Container):
-  execution_address: ExecutionAddress
-  validator_pubkey: BLSPubkey
-  amount: Gwei
-  slot: Slot
+    execution_address: ExecutionAddress
+    validator_pubkey: BLSPubkey
+    amount: Gwei
+    slot: Slot
 ```
 
 #### `PendingUndelegateRequest`
@@ -231,6 +234,16 @@ class UndelegationExit(Container):
 
 ```
 
+#### `WithdrawalFromDelegate`
+
+```python
+class WithdrawalFromDelegate(Container):
+    index: WithdrawalIndex
+    delegator_index: DelegatorIndex
+    address: ExecutionAddress
+    amount: Gwei
+```
+
 ### Modified containers
 
 #### `ExecutionRequests`
@@ -240,7 +253,8 @@ class ExecutionRequests(Container):
     deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
     withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
     consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
-    delegation_operations: List[DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
+    delegation_operations: List[
+        DelegationOperationRequest, MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD]  # [New in EIPXXXX_eODS]
 ```
 
 #### `Validator`
@@ -314,69 +328,178 @@ class BeaconState(Container):
     pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
     pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]  # [New in Electra:EIP7251]
     # Delegation additions
+    next_withdrawal_from_delegate_index: WithdrawalIndex
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_operator_activations: List[PendingActivateOperator, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_deposits_to_delegate: List[PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_operator_activations: List[
+        PendingActivateOperator, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    pending_deposits_to_delegate: List[
+        PendingDepositToDelegate, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_delegations: List[PendingDelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_undelegations: List[PendingUndelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_redelegations: List[PendingRedelegateRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    pending_withdrawals_from_delegators: List[PendingWithdrawFromDelegatorRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
-    undelegations_exit_queue: List[UndelegationExit, PENDING_DELEGATION_OPERATIONS_LIMIT] # [New in EIPXXXX_eODS]
+    pending_withdrawals_from_delegators: List[
+        PendingWithdrawFromDelegatorRequest, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+    undelegations_exit_queue: List[UndelegationExit, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
+```
+
+#### `ExecutionPayload`
+
+```python
+class ExecutionPayload(Container):
+    parent_hash: Hash32
+    fee_recipient: ExecutionAddress
+    state_root: Bytes32
+    receipts_root: Bytes32
+    logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
+    prev_randao: Bytes32
+    block_number: uint64
+    gas_limit: uint64
+    gas_used: uint64
+    timestamp: uint64
+    extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
+    base_fee_per_gas: uint256
+    block_hash: Hash32
+    transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
+    withdrawals: List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]
+    withdrawals_from_delegate: List[WithdrawalFromDelegate, MAX_WITHDRAWALS_PER_PAYLOAD]  # new in eipxxxx_eods
+    # [New in Deneb:EIP4844]
+    blob_gas_used: uint64
+    # [New in Deneb:EIP4844]
+    excess_blob_gas: uint64
 ```
 
 ## Beacon chain state transition function
 
 ### Block processing
 
+#### New `get_expected_withdrawals_from_delegate`
+
+```python
+def get_expected_withdrawals_from_delegate(state: BeaconState, execution_address: ExecutionAddress) -> None:
+    withdrawals: List[Withdrawal] = []
+    postponed_withdrawals = []
+    current_epoch = get_current_epoch(state)
+    withdrawal_index = state.next_withdrawal_from_delegate_index
+
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+
+    for withdrawal in state.pending_withdrawals_from_delegators:
+        if len(withdrawals) == MAX_PENDING_WITHDRAWALS_FROM_DELEGATOR_PER_PAYLOAD:
+            postponed_withdrawals.push(withdrawal)
+            break
+
+        withdrawable_balance = withdrawal.amount
+
+        if (withdrawal.execution_address == execution_address):
+            delegator_index = delegators_execution_addresses.index(execution_address)
+            delegator = state.delegators[delegator_index]
+
+            if (delegator.delegator_entry_epoch + MIN_DELEGATOR_WITHDRAWABILITY_DELAY) < current_epoch:
+                postponed_withdrawals.push(withdrawal)
+                break
+
+            if state.delegators_balances[delegator_index] < withdrawable_balance:
+                withdrawable_balance = state.delegators_balances[delegator_index]
+
+            withdrawals.append(
+                WithdrawalFromDelegate(
+                    index=withdrawal_index,
+                    delegator_index=delegator_index,
+                    address=execution_address,
+                    amount=withdrawable_balance,
+                )
+            )
+            withdrawal_index += WithdrawalIndex(1)
+
+    return withdrawals, postponed_withdrawals
+```
+
+#### New `process_withdrawals_from_delegate`
+
+```python
+def process_withdrawals_from_delegate(state: BeaconState, payload: ExecutionPayload) -> None:
+    expected_withdrawals_from_delegate, postponed_withdrawals = get_expected_withdrawals_from_delegate(state)
+
+    assert payload.withdrawals_from_delegate == expected_withdrawals_from_delegate
+
+    for withdrawal in expected_withdrawals_from_delegate:
+        decrease_delegator_balance(state, withdrawal.delegator_index, withdrawal.amount)
+
+    state.pending_withdrawals_from_delegators = postponed_withdrawals
+
+    # Update the next withdrawal index if this block contained withdrawals
+    if len(expected_withdrawals_from_delegate) != 0:
+        latest_withdrawal = expected_withdrawals_from_delegate[-1]
+        state.next_withdrawal_from_delegate_index = WithdrawalIndex(latest_withdrawal.index + 1)
+
+```
+
 #### New `process_delegation_operation_request`
 
 ```python
 def process_delegation_operation_request(state: BeaconState,
                                          delegation_operation_request: DelegationOperationRequest) -> None:
-   
     if delegation_operation_request.type == ACTIVATE_OPERATOR_REQUEST_TYPE:
-      state.pending_activate_operator.append(PendingActivateOperator(
-          validator_pubkey=delegation_operation_request.target_pubkey,
-          execution_address=delegation_operation_request.execution_address,
-          fee_quotient=delegation_operation_request.fee_quotient
-      ))
-    
+        state.pending_activate_operator.append(PendingActivateOperator(
+            validator_pubkey=delegation_operation_request.target_pubkey,
+            execution_address=delegation_operation_request.execution_address,
+            fee_quotient=delegation_operation_request.fee_quotient
+        ))
+
     elif delegation_operation_request.type == DEPOSIT_TO_DELEGATE_REQUEST_TYPE:
         state.pending_deposits_to_delegate.append(PendingDepositToDelegate(
             execution_address=delegation_operation_request.execution_address,
             amount=delegation_operation_request.amount
         ))
-        
+
     elif delegation_operation_request.type == DELEGATE_REQUEST_TYPE:
-      state.pending_delegations.append(PendingDelegateRequest(
-        validator_pubkey=delegation_operation_request.target_pubkey,
-        execution_address=delegation_operation_request.execution_address,
-        amount=delegation_operation_request.amount,
-        slot=state.slot
-      ))
+        state.pending_delegations.append(PendingDelegateRequest(
+            validator_pubkey=delegation_operation_request.target_pubkey,
+            execution_address=delegation_operation_request.execution_address,
+            amount=delegation_operation_request.amount,
+            slot=state.slot
+        ))
 
     elif delegation_operation_request.type == UNDELEGATE_REQUEST_TYPE:
-      state.pending_undelegations.append(PendingUndelegateRequest(
-        validator_pubkey=delegation_operation_request.target_pubkey,
-        execution_address = delegation_operation_request.execution_address,
-        amount=delegation_operation_request.amount
-      ))
-        
+        state.pending_undelegations.append(PendingUndelegateRequest(
+            validator_pubkey=delegation_operation_request.target_pubkey,
+            execution_address=delegation_operation_request.execution_address,
+            amount=delegation_operation_request.amount
+        ))
+
     elif delegation_operation_request.type == REDELEGATE_REQUEST_TYPE:
-      state.pending_redelegations.append(PendingRedelegateRequest(
-        source_pubkey=delegation_operation_request.source_pubkey,
-        target_pubkey=delegation_operation_request.target_pubkey,
-        execution_address=delegation_operation_request.execution_address,  
-        amount=delegation_operation_request.amount
-      ))
-        
+        state.pending_redelegations.append(PendingRedelegateRequest(
+            source_pubkey=delegation_operation_request.source_pubkey,
+            target_pubkey=delegation_operation_request.target_pubkey,
+            execution_address=delegation_operation_request.execution_address,
+            amount=delegation_operation_request.amount
+        ))
+
     elif delegation_operation_request.type == WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE:
-      state.pending_withdrawals_from_delegators.append(PendingWithdrawFromDelegatorRequest(
-        execution_address=delegation_operation_request.execution_address,  
-        amount=delegation_operation_request.amount
-      )) 
+        state.pending_withdrawals_from_delegators.append(PendingWithdrawFromDelegatorRequest(
+            execution_address=delegation_operation_request.execution_address,
+            amount=delegation_operation_request.amount
+        )) 
+```
+
+#### Mofified `process_block`
+
+```python
+def process_block(state: BeaconState, block: BeaconBlock) -> None:
+    process_block_header(state, block)
+    # [Modified in Electra:EIP7251]
+    process_withdrawals(state, block.body.execution_payload)
+    # [Added in eipxxxx_eods]
+    process_withdrawals_from_delegate(state, block.body.execution_payload)
+    # [Modified in Electra:EIP6110]
+    process_execution_payload(state, block.body, EXECUTION_ENGINE)
+    process_randao(state, block.body)
+    process_eth1_data(state, block.body)
+    # [Modified in Electra:EIP6110:EIP7002:EIP7549:EIP7251]
+    process_operations(state, block.body)
+    process_sync_aggregate(state, block.body.sync_aggregate)
 ```
 
 #### Execution payload
@@ -423,8 +546,8 @@ def register_new_delegator(state: BeaconState, execution_address: ExecutionAddre
 ```python
 def get_delegated_validator(state: BeaconState, validator_pubkey: BLSPubkey) -> DelegatedValidator:
     for i, dv in enumerate(state.delegated_validators):
-      if dv.delegated_validator.pubkey == validator_pubkey:
-        return dv
+        if dv.delegated_validator.pubkey == validator_pubkey:
+            return dv
 ```
 
 ### Epoch processing
@@ -434,12 +557,13 @@ def get_delegated_validator(state: BeaconState, validator_pubkey: BLSPubkey) -> 
 ```python
 def process_pending_deposits_to_delegate(state: BeaconState) -> None:
     for deposit_to_delegate in state.pending_deposits_to_delegate:
-      delegators_execution_addresses = [d.execution_address for d in state.delegators]
-      if deposit_to_delegate.execution_address not in delegators_execution_addresses:
-        delegator_index = register_new_delegator(state, deposit_to_delegate.execution_address)
-      else:
-        delegator_index = DelegatorIndex(delegators_execution_addresses.index(deposit_to_delegate.execution_address))
-      increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
+        delegators_execution_addresses = [d.execution_address for d in state.delegators]
+        if deposit_to_delegate.execution_address not in delegators_execution_addresses:
+            delegator_index = register_new_delegator(state, deposit_to_delegate.execution_address)
+        else:
+            delegator_index = DelegatorIndex(
+                delegators_execution_addresses.index(deposit_to_delegate.execution_address))
+        increase_delegator_balance(state, delegator_index, deposit_to_delegate.amount)
     state.pending_deposits_to_delegate = []
 ```
 
@@ -448,49 +572,49 @@ def process_pending_deposits_to_delegate(state: BeaconState) -> None:
 ```python
 def process_pending_activate_operators(state: BeaconState) -> None:
     for pending_activation in state.pending_activate_operator:
-      # check if validator with given pubkey exists 
-      validator_pubkeys = [v.pubkey for v in state.validators]
-      request_pubkey = pending_activation.validator_pubkey
-      if request_pubkey not in validator_pubkeys:
-        break
-          
-      validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
-      validator = state.validators[validator_index]
+        # check if validator with given pubkey exists 
+        validator_pubkeys = [v.pubkey for v in state.validators]
+        request_pubkey = pending_activation.validator_pubkey
+        if request_pubkey not in validator_pubkeys:
+            break
 
-      # Ensure the validator is not already an operator
-      if validator.is_operator:
-        break
-      
-      # Verify withdrawal credentials
-      has_correct_credential = has_compounding_withdrawal_credential(validator)
-      is_correct_source_address = (
-              validator.withdrawal_credentials[12:] == pending_activation.execution_address
-      )
-      if not (has_correct_credential and is_correct_source_address):
-        break
-          
-      # Verify validator has minimum initial balance (the operator's bond) 
-      if state.balances[validator_index] < MIN_OPERATOR_BALANCE
-        break
-          
-      # Verify exit has not been initiated
-      if validator.exit_epoch != FAR_FUTURE_EPOCH:
-        break
-          
-      # Ensure the validator is not slashed
-      if validator.slashed:
-        break
-   
-      validator.is_operator = True
-      
-      delegated_validator =  DelegatedValidator(
-        validator = validator,
-        delegated_validator_quota = 1,
-        delegators_quotas = [],
-        delegated_balances = [],
-        total_delegated_balance = 0,
-        fee_quotient = pending_activation.fee_quotient
-      ) 
+        validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
+        validator = state.validators[validator_index]
+
+        # Ensure the validator is not already an operator
+        if validator.is_operator:
+            break
+
+        # Verify withdrawal credentials
+        has_correct_credential = has_compounding_withdrawal_credential(validator)
+        is_correct_source_address = (
+                validator.withdrawal_credentials[12:] == pending_activation.execution_address
+        )
+        if not (has_correct_credential and is_correct_source_address):
+            break
+
+        # Verify validator has minimum initial balance (the operator's bond) 
+        if state.balances[validator_index] < MIN_OPERATOR_BALANCE
+            break
+
+        # Verify exit has not been initiated
+        if validator.exit_epoch != FAR_FUTURE_EPOCH:
+            break
+
+        # Ensure the validator is not slashed
+        if validator.slashed:
+            break
+
+        validator.is_operator = True
+
+        delegated_validator = DelegatedValidator(
+            validator=validator,
+            delegated_validator_quota=1,
+            delegators_quotas=[],
+            delegated_balances=[],
+            total_delegated_balance=0,
+            fee_quotient=pending_activation.fee_quotient
+        )
     state.delegated_validators.append(delegated_validator)
     state.pending_activate_operator = []
 ```
@@ -503,54 +627,54 @@ def process_pending_delegations(state: BeaconState) -> None:
     processed_amount = 0
     delegations_to_postpone = []
     finalized_slot = compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-    
+
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
     validator_pubkeys = [v.pubkey for v in state.validators]
-        
+
     for delegation in state.pending_delegations:
         delegated_amount = 0
         requested_to_delegate = delegation.amount
-        
+
         # check if the registry contains the delegator and validator
         delegator_index = delegators_execution_addresses.index(delegation.execution_address)
         if not delegator_index:
             break
-        
+
         validator_index = validator_pubkeys.index(delegation.validator_pubkey)
         if not validator_index:
             break
 
         if state.delegators_balance[delegator_index] == 0:
-          break
-            
+            break
+
         if state.delegators_balance[delegator_index] < requested_to_delegate:
-          requested_to_delegate = state.delegators_balance[delegator_index]
+            requested_to_delegate = state.delegators_balance[delegator_index]
 
         validator = state.validators[validator_index]
-        
+
         if not is_validator_delegable(state, validator):
-          break
-        
+            break
+
         if delegation.slot > finalized_slot:
             delegations_to_postpone.append(delegation)
             break
-        
+
         # we can process the entire amount
         if available_for_processing >= processed_amount + requested_to_delegate:
-          delegated_amount = delegation.amount
-          
+            delegated_amount = delegation.amount
+
         # we can process a partial amount  
         elif available_for_processing < processed_amount:
-          delegated_amount = available_for_processing - processed_amount 
-          
-        # nothing left in churn  
-        else: 
+            delegated_amount = available_for_processing - processed_amount
+
+            # nothing left in churn  
+        else:
             delegations_to_postpone.append(delegation)
             break
 
         # here beacon-chain-accounting is called to delegate amount to validator
         delegate_to_validator(state, delegator_index, validator.pubkey, delegated_amount)
-        
+
         processed_amount += delegated_amount
 
     state.pending_delegations = delegations_to_postpone
@@ -561,42 +685,42 @@ def process_pending_delegations(state: BeaconState) -> None:
 ```python
 def process_pending_undelegations(state: BeaconState) -> None:
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
-  
+
     for undelegate in state.pending_undelegations:
-      delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
-      if not delegator_index:
-        break
-          
-      delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
-      if not delegated_validator:
-        break
-      if not is_validator_delegable(state, delegated_validator.validator):
-        break
-  
-      if len(delegated_validator.delegators_quotas) < delegator_index:
-        break
-  
-      if delegated_validator.delegators_quotas[delegator_index] == 0:
-        break
-          
-      # we cap the requested amount to avoid a malicious request which can fill up the churn    
-      requested_to_undelegate = undelegate.amount  
-      if delegated_validator.delegated_balances[delegator_index] < requested_to_undelegate:
-        requested_to_undelegate = delegated_validator.delegated_balances[delegator_index]
-  
-      # Calculates the undelegation's exit and withdrawability epochs
-      exit_queue_epoch = compute_exit_epoch_and_update_churn(state, requested_to_undelegate)
-      withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-  
-      # Appends the undelegation in the undelegation exit queue
-      state.undelegations_exit_queue.append(
-        UndelegationExit(
-          amount=requested_to_undelegate,
-          exit_queue_epoch=exit_queue_epoch,
-          withdrawable_epoch=withdrawable_epoch,
-          execution_address=undelegate.execution_address,
-          validator_pubkey=undelegate.validator_pubkey))
-          
+        delegator_index = delegators_execution_addresses.index(undelegate.execution_address)
+        if not delegator_index:
+            break
+
+        delegated_validator = get_delegated_validator(state, undelegate.validator_pubkey)
+        if not delegated_validator:
+            break
+        if not is_validator_delegable(state, delegated_validator.validator):
+            break
+
+        if len(delegated_validator.delegators_quotas) < delegator_index:
+            break
+
+        if delegated_validator.delegators_quotas[delegator_index] == 0:
+            break
+
+        # we cap the requested amount to avoid a malicious request which can fill up the churn    
+        requested_to_undelegate = undelegate.amount
+        if delegated_validator.delegated_balances[delegator_index] < requested_to_undelegate:
+            requested_to_undelegate = delegated_validator.delegated_balances[delegator_index]
+
+        # Calculates the undelegation's exit and withdrawability epochs
+        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, requested_to_undelegate)
+        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+
+        # Appends the undelegation in the undelegation exit queue
+        state.undelegations_exit_queue.append(
+            UndelegationExit(
+                amount=requested_to_undelegate,
+                exit_queue_epoch=exit_queue_epoch,
+                withdrawable_epoch=withdrawable_epoch,
+                execution_address=undelegate.execution_address,
+                validator_pubkey=undelegate.validator_pubkey))
+
     state.pending_undelegations = []
 ```
 
@@ -605,60 +729,61 @@ def process_pending_undelegations(state: BeaconState) -> None:
 *Note:* A redelegation is composed of one undelegation followed by one delegation.
 
 ```python
-def process_pending_redelegations(state: BeaconState) -> None :
+def process_pending_redelegations(state: BeaconState) -> None:
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
-    
+
     for redelegate in state.pending_redelegations:
         # we check if the target is valid
         target_delegated_validator = get_delegated_validator(state, redelegate.target_pubkey)
         if not target_delegated_validator:
-          break
-       
+            break
+
         # we check if the source is valid   
         source_delegated_validator = get_delegated_validator(state, redelegate.source_pubkey)
         if not source_delegated_validator:
-          break
-        
+            break
+
         delegator_index = delegators_execution_addresses.index(redelegate.execution_address)
         if not delegator_index:
             break
-        
+
         # check if delegator has a delegation in the source delegated validator    
         if len(source_delegated_validator.delegators_quotas) < delegator_index:
-            break  
+            break
         if source_delegated_validator.delegators_quotas[delegator_index] == 0:
             break
-         
+
         # we cap the requested amount to avoid a malicious request which can fill up the churn    
-        requested_to_redelegate = redelegate.amount  
+        requested_to_redelegate = redelegate.amount
         if source_delegated_validator.delegated_balances[delegator_index] < requested_to_redelegate:
-            requested_to_redelegate = source_delegated_validator.delegated_balances[delegator_index]    
-        
-        # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
+            requested_to_redelegate = source_delegated_validator.delegated_balances[delegator_index]
+
+            # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
         withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-        
+
         # Appends the redelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
-          UndelegationExit(
-            amount=requested_to_redelegate,             
-            exit_queue_epoch=exit_queue_epoch, 
-            withdrawable_epoch=withdrawable_epoch, 
-            execution_address=redelegate.execution_address, 
-            validator_pubkey=redelegate.source_pubkey,
-            is_redelegation=True,
-            redelegate_to_validator_pubkey=redelegate.target_pubkey
-          ))
-        
+            UndelegationExit(
+                amount=requested_to_redelegate,
+                exit_queue_epoch=exit_queue_epoch,
+                withdrawable_epoch=withdrawable_epoch,
+                execution_address=redelegate.execution_address,
+                validator_pubkey=redelegate.source_pubkey,
+                is_redelegation=True,
+                redelegate_to_validator_pubkey=redelegate.target_pubkey
+            ))
+
     state.pending_redelegations = []
 ```
+
 #### New `process_undelegations_exit_queue`
 
 ```python
-def process_undelegations_exit_queue(state: BeaconState) -> None :
+def process_undelegations_exit_queue(state: BeaconState) -> None:
     current_epoch = get_current_epoch(state)
     postponed = []
-    
+
     for undelegation_exit in state.undelegations_exit_queue:
         if undelegation_exit.exit_queue_epoch != FAR_FUTURE_EPOCH:
             # the amount is undelegated
@@ -668,61 +793,37 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
                 undelegated_amount, total_delegated_at_withdrawal = undelegate_from_validator(state, undelegation_exit)
                 undelegation_exit.amount = undelegated_amount
                 undelegation_exit.total_delegated_at_withdrawal = total_delegated_at_withdrawal
-               
+
                 # we postpone it, so we can test it for withdrawability next epoch
                 postponed.append(undelegation_exit)
                 continue
             else:
-              # not undelegated, we postpone the check for next epoch
-              postponed.append(undelegation_exit)
-              continue
-                
+                # not undelegated, we postpone the check for next epoch
+                postponed.append(undelegation_exit)
+                continue
+
         else:
             # the amount has been undelegated, we now check for withdrawability
             if current_epoch >= undelegation_exit.withdrawable_epoch:
                 # beacon-chain-accounting is called to settle undelegation
                 delegator_amount = settle_undelegation(state, undelegation_exit)
-            
+
                 if undelegation_exit.is_redelegation:
                     # Appends the redelegation in the delegations activation queue
                     state.pending_delegations.append(PendingDelegateRequest(
-                      validator_pubkey=undelegation_exit.redelegate_to_validator_pubkey,
-                      execution_address=undelegation_exit.execution_address,
-                      amount=delegator_amount,
-                      slot = state.slot
-                    )) 
-            
+                        validator_pubkey=undelegation_exit.redelegate_to_validator_pubkey,
+                        execution_address=undelegation_exit.execution_address,
+                        amount=delegator_amount,
+                        slot=state.slot
+                    ))
+
             else:
                 # we can not withdraw, we postpone
                 postponed.append(undelegation_exit)
-              
+
     state.undelegations_exit_queue = postponed
 ```
 
-#### New `process_pending_withdrawals_from_delegators`
-
-```python
-def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
-    withdrawals_to_postpone = []
-    
-    delegators_execution_addresses = [d.execution_address for d in state.delegators]
-    
-    for withdraw_from_delegator in state.pending_withdrawals_from_delegators:
-      delegator_index = delegators_execution_addresses.index(withdraw_from_delegator.execution_address)
-      delegator = state.delegators[delegator_index]
-      
-      withdraw_amount = withdraw_from_delegator.amount
-      if withdraw_amount > state.delegators_balances[delegator_index]:
-        withdraw_amount = state.delegators_balances[delegator_index]
-      
-      if is_withdrawable_from_delegator(state, delegator):
-         decrease_delegator_balance(state, delegator_index, withdraw_amount)
-      else:
-          withdrawals_to_postpone.append(withdraw_from_delegator)
-  
-    state.pending_withdrawals_from_delegators = withdrawals_to_postpone
-
-```
 #### Modified process_rewards_and_penalties
 
 *Note*: The function `process_rewards_and_penalties` is modified to support delegation logic.
@@ -735,22 +836,22 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
 
     flag_deltas = [get_flag_index_deltas(state, flag_index) for flag_index in range(len(PARTICIPATION_FLAG_WEIGHTS))]
     deltas = flag_deltas + [get_inactivity_penalty_deltas(state)]
-    for (rewards, penalties) in deltas:    
+    for (rewards, penalties) in deltas:
         for index in range(len(state.validators)):
             validator = state.validators[index]
             if validator.is_operator:
-              delegated_validator = get_delegated_validator(state, validator.pubkey)
-              validator_quota = delegated_validator.delegated_validator_quota
-              # Applies proportional rewards and penalties 
-              apply_delegations_rewards(rewards[index] - rewards[index] * validator_quota, delegated_validator)
-              apply_delegations_penalties(penalties[index] - penalties[index] * validator_quota, delegated_validator)
-              
-              increase_balance(state, ValidatorIndex(index), rewards[index] * validator_quota)
-              decrease_balance(state, ValidatorIndex(index), penalties[index] * validator_quota)
+                delegated_validator = get_delegated_validator(state, validator.pubkey)
+                validator_quota = delegated_validator.delegated_validator_quota
+                # Applies proportional rewards and penalties 
+                apply_delegations_rewards(rewards[index] - rewards[index] * validator_quota, delegated_validator)
+                apply_delegations_penalties(penalties[index] - penalties[index] * validator_quota, delegated_validator)
+
+                increase_balance(state, ValidatorIndex(index), rewards[index] * validator_quota)
+                decrease_balance(state, ValidatorIndex(index), penalties[index] * validator_quota)
             else:
-              increase_balance(state, ValidatorIndex(index), rewards[index])
-              decrease_balance(state, ValidatorIndex(index), penalties[index])
-              
+                increase_balance(state, ValidatorIndex(index), rewards[index])
+                decrease_balance(state, ValidatorIndex(index), penalties[index])
+
 ```
 
 #### Modified `process_slashings`
@@ -771,22 +872,22 @@ def process_slashings(state: BeaconState) -> None:
         if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
             effective_balance_increments = validator.effective_balance // increment
             penalty = penalty_per_effective_balance_increment * effective_balance_increments
-            
+
             # [New in EIPXXXX_eODS]
-            if validator.is_operator: 
+            if validator.is_operator:
                 # slash the exit queue
                 slashed_in_queue = slash_exit_queue(state, validator.pubkey, penalty)
-                
+
                 rest_to_slash = penalty - slashed_in_queue
-                
+
                 delegated_validator = get_delegated_validator(state, validator.pubkey)
-              
+
                 validator_penalty = delegated_validator.delegated_validator_quota * rest_to_slash
-                delegators_penalty =  rest_to_slash - validator_penalty
+                delegators_penalty = rest_to_slash - validator_penalty
 
                 # slash the validator
                 decrease_balance(state, ValidatorIndex(index), validator_penalty)
-                
+
                 # slash the delegations
                 apply_delegations_slashing(delegated_validator, delegators_penalty)
             else:
@@ -798,19 +899,20 @@ def process_slashings(state: BeaconState) -> None:
 ```python
 def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: Gwei) -> Gwei:
     current_epoch = get_current_epoch(state)
-    list_to_slash = [item for item in state.exit_queue if item.validator_pubkey == validator_pubkey and item.exit_queue_epoch < current_epoch]
+    list_to_slash = [item for item in state.exit_queue if
+                     item.validator_pubkey == validator_pubkey and item.exit_queue_epoch < current_epoch]
     total_slashed_in_queue = 0
-    
+
     for index in range(len(list_to_slash)):
-      exit_item = state.list_to_slash[index]
-      
-      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
-      to_slash = delegated_quota * penalty
-          
-      total_slashed_in_queue += to_slash
-      
-      state.exit_queue[index].undelegated_amount -= to_slash
-    
+        exit_item = state.list_to_slash[index]
+
+        delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
+        to_slash = delegated_quota * penalty
+
+        total_slashed_in_queue += to_slash
+
+        state.exit_queue[index].undelegated_amount -= to_slash
+
     return total_slashed_in_queue
 ```
 
@@ -825,16 +927,17 @@ def process_effective_balance_updates(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         validator = state.validators[index]
         if validator.is_operator:
-          balance = state.balances[index] + get_delegated_validator(state, validator.pubkey).total_delegated_balance  # [Modified in EIPXXXX_eODS]
+            balance = state.balances[index] + get_delegated_validator(state,
+                                                                      validator.pubkey).total_delegated_balance  # [Modified in EIPXXXX_eODS]
         else:
-          balance = state.balances[index]       
+            balance = state.balances[index]
         HYSTERESIS_INCREMENT = uint64(EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT)
         DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
         UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
         max_effective_balance = get_max_effective_balance(validator)
         if (
-            balance + DOWNWARD_THRESHOLD < validator.effective_balance
-            or validator.effective_balance + UPWARD_THRESHOLD < balance
+                balance + DOWNWARD_THRESHOLD < validator.effective_balance
+                or validator.effective_balance + UPWARD_THRESHOLD < balance
         ):
             validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, max_effective_balance)
 ```
@@ -842,21 +945,21 @@ def process_effective_balance_updates(state: BeaconState) -> None:
 #### New `is_validator_delegable`
 
 ```python
-def is_validator_delegable(state:BeaconState, validator: Validator) -> boolean:
+def is_validator_delegable(state: BeaconState, validator: Validator) -> boolean:
     next_epoch = Epoch(get_current_epoch(state) + 1)
     if not validator:
         return False
     if validator.is_operator:
         return False
     if validator.exit_epoch < FAR_FUTURE_EPOCH:
-      return False
+        return False
     if validator.withdrawable_epoch < next_epoch:
-      return False
+        return False
     if validator.slashed:
-      return False
+        return False
     if validator.effective_balance > MAX_EFFECTIVE_BALANCE:
-      return False
-    
+        return False
+
     return True
 ```
 
@@ -866,7 +969,7 @@ def is_validator_delegable(state:BeaconState, validator: Validator) -> boolean:
 def get_validator_index_by_pubkey(pubkey: BLSPubkey) -> ValidatorIndex:
     validator_pubkeys = [v.pubkey for v in state.validators]
     validator_index = ValidatorIndex(validator_pubkeys.index(pubkey))
-    
+
     return validator_index
 ```
 
@@ -888,7 +991,6 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
     process_pending_redelegations(state)  # [New in EIPXXXX_eODS]
     process_undelegations_exit_queue(state)  # [New in EIPXXXX_eODS]
-    process_pending_withdrawals_from_delegators(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
@@ -915,13 +1017,13 @@ def process_registry_updates(state: BeaconState) -> None:
         if is_eligible_for_activation_queue(validator):  # [Modified in Electra:EIP7251]
             validator.activation_eligibility_epoch = current_epoch + 1
         elif (
-            is_active_validator(validator, current_epoch)
-            and validator.effective_balance <= EJECTION_BALANCE 
-            
-            or
-            # If validator balance (the operator's bond) is below MIN_OPERATOR_BALANCE
-            validator.is_operator == True 
-            and is_active_validator(validator, current_epoch) and state.balances[index] < MIN_OPERATOR_BALANCE
+                is_active_validator(validator, current_epoch)
+                and validator.effective_balance <= EJECTION_BALANCE
+
+                or
+                # If validator balance (the operator's bond) is below MIN_OPERATOR_BALANCE
+                validator.is_operator == True
+                and is_active_validator(validator, current_epoch) and state.balances[index] < MIN_OPERATOR_BALANCE
         ):
             initiate_validator_exit(state, ValidatorIndex(index))  # [Modified in Electra:EIP7251]
         elif is_eligible_for_activation(state, validator):
@@ -929,6 +1031,7 @@ def process_registry_updates(state: BeaconState) -> None:
 ```
 
 #### Operations
+
 ##### Modified `process_operations`
 
 ```python
@@ -959,6 +1062,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 ```
 
 ##### Deposits
+
 ###### New `is_withdrawable_from_delegator`
 
 ```python
