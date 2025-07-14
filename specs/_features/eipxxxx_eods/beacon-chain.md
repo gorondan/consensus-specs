@@ -373,7 +373,7 @@ class ExecutionPayload(Container):
 #### New `get_expected_withdrawals_from_delegate`
 
 ```python
-def get_expected_withdrawals_from_delegate(state: BeaconState) -> None:
+def get_expected_withdrawals_from_delegate(state: BeaconState, execution_address: ExecutionAddress) -> None:
     withdrawals: List[Withdrawal] = []
     postponed_withdrawals = []
     current_epoch = get_current_epoch(state)
