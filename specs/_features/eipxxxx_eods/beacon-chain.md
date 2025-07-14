@@ -587,7 +587,7 @@ def process_pending_activate_operators(state: BeaconState) -> None:
       if validator.is_operator:
         break
       
-      # Verify withdrawal credentials
+      # Verify request has validator ownership and proper withdrawal credentials
       has_correct_credential = has_compounding_withdrawal_credential(validator)
       is_correct_source_address = (
               validator.withdrawal_credentials[12:] == pending_activation.execution_address
@@ -595,6 +595,10 @@ def process_pending_activate_operators(state: BeaconState) -> None:
       if not (has_correct_credential and is_correct_source_address):
         break
           
+      # Verify validator has minimum initial balance (the operator's bond) 
+      if state.balances[validator_index] < MIN_OPERATOR_BALANCE
+        break 
+        
       # Verify exit has not been initiated
       if validator.exit_epoch != FAR_FUTURE_EPOCH:
         break
@@ -994,6 +998,34 @@ def process_epoch(state: BeaconState) -> None:
     process_historical_summaries_update(state)
     process_participation_flag_updates(state)
     process_sync_committee_updates(state)
+```
+
+#### Modified `process_registry_updates`
+
+*Note*: The function `process_registry_updates` is modified to initiate delegated validator exit if operator bond
+(delegated validator's actual balance in the state) gets below MIN_OPERATOR_BALANCE.
+
+```python
+def process_registry_updates(state: BeaconState) -> None:
+    current_epoch = get_current_epoch(state)
+    activation_epoch = compute_activation_exit_epoch(current_epoch)
+
+    # Process activation eligibility, ejections, and activations
+    for index, validator in enumerate(state.validators):
+        if is_eligible_for_activation_queue(validator):  # [Modified in Electra:EIP7251]
+            validator.activation_eligibility_epoch = current_epoch + 1
+        elif (
+            is_active_validator(validator, current_epoch)
+            and validator.effective_balance <= EJECTION_BALANCE 
+            
+            or
+            # If validator balance (the operator's bond) is below MIN_OPERATOR_BALANCE
+            validator.is_operator == True 
+            and is_active_validator(validator, current_epoch) and state.balances[index] < MIN_OPERATOR_BALANCE
+        ):
+            initiate_validator_exit(state, ValidatorIndex(index))  # [Modified in Electra:EIP7251]
+        elif is_eligible_for_activation(state, validator):
+            validator.activation_epoch = activation_epoch
 ```
 
 #### Operations
