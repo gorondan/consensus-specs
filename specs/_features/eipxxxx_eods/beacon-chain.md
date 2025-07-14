@@ -81,9 +81,15 @@ without dynamic validator selection or delegator governance.
 
 ### Execution
 
-| Name                                             | Value                     | Description                                                                                             |
-|--------------------------------------------------|---------------------------|---------------------------------------------------------------------------------------------------------|
-| `MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD` | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS* Maximum number of execution layer delegation operations requests in each payload |
+| Name                                             | Value                     | Description                                                                                              |
+|--------------------------------------------------|---------------------------|----------------------------------------------------------------------------------------------------------|
+| `MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD` | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS]* Maximum number of execution layer delegation operations requests in each payload |
+
+### Gwei values
+
+| Name                   | Value                                  | Description                                                                 |
+|------------------------|----------------------------------------|-----------------------------------------------------------------------------|
+| `MIN_OPERATOR_BALANCE` | `Gwei(2**2 * 10**9)` (= 4,000,000,000) | *[New in EIPXXXX_eODS]* Minimum balance for a validator to become delegable |
 
 ### State list lengths
 
@@ -112,12 +118,6 @@ without dynamic validator selection or delegator governance.
 | `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | `Bytes1('0x05')` |
 | `EARLY_LIQUIDITY_REQUEST_TYPE`         | `Bytes1('0x06')` |
 | `EXIT_REQUEST_TYPE`                    | `Bytes1('0x07')` |
-
-### Domain types
-
-| Name                         | Value                      |
-|------------------------------|----------------------------|
-| `DOMAIN_DEPOSIT_TO_DELEGATE` | `DomainType('0x07000000')` |
 
 ## Configuration
 
@@ -426,8 +426,6 @@ def get_delegated_validator(state: BeaconState, validator_pubkey: BLSPubkey) -> 
       if dv.delegated_validator.pubkey == validator_pubkey:
         return dv
 ```
-
-### Beacon state mutators
 
 ### Epoch processing
 
