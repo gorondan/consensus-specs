@@ -373,7 +373,7 @@ class ExecutionPayload(Container):
 #### New `get_expected_withdrawals_from_delegate`
 
 ```python
-def get_expected_withdrawals_from_delegate(state: BeaconState, execution_address: ExecutionAddress) -> None:
+def get_expected_withdrawals_from_delegate(state: BeaconState) -> None:
     withdrawals: List[Withdrawal] = []
     postponed_withdrawals = []
     current_epoch = get_current_epoch(state)
@@ -383,31 +383,35 @@ def get_expected_withdrawals_from_delegate(state: BeaconState, execution_address
 
     for withdrawal in state.pending_withdrawals_from_delegators:
         if len(withdrawals) == MAX_PENDING_WITHDRAWALS_FROM_DELEGATOR_PER_PAYLOAD:
-            postponed_withdrawals.push(withdrawal)
+            postponed_withdrawals.append(withdrawal)
             break  
           
         withdrawable_balance = withdrawal.amount
         
-        if(withdrawal.execution_address == execution_address):
-          delegator_index = delegators_execution_addresses.index(execution_address)
-          delegator = state.delegators[delegator_index]
-            
-          if (delegator.delegator_entry_epoch + MIN_DELEGATOR_WITHDRAWABILITY_DELAY) < current_epoch:
-            postponed_withdrawals.push(withdrawal)
-            break
-              
-          if state.delegators_balances[delegator_index] < withdrawable_balance:
-            withdrawable_balance = state.delegators_balances[delegator_index]
+        delegator_index = delegators_execution_addresses.index(withdrawal.execution_address)
+        
+        # we drop the request if there is no delegator with given execution_address
+        if not delegator_index:
+          break
+        
+        delegator = state.delegators[delegator_index]
           
-          withdrawals.append(
-            WithdrawalFromDelegate(
-                    index=withdrawal_index,
-                    delegator_index=delegator_index,
-                    address=execution_address,
-                    amount=withdrawable_balance,
-                )
-          )   
-          withdrawal_index += WithdrawalIndex(1) 
+        if (delegator.delegator_entry_epoch + MIN_DELEGATOR_WITHDRAWABILITY_DELAY) < current_epoch:
+          postponed_withdrawals.append(withdrawal)
+          break
+            
+        if state.delegators_balances[delegator_index] < withdrawable_balance:
+          withdrawable_balance = state.delegators_balances[delegator_index]
+        
+        withdrawals.append(
+          WithdrawalFromDelegate(
+                  index=withdrawal_index,
+                  delegator_index=delegator_index,
+                  address=execution_address,
+                  amount=withdrawable_balance,
+              )
+        )   
+        withdrawal_index += WithdrawalIndex(1) 
     
     return withdrawals, postponed_withdrawals
 ```
