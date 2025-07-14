@@ -81,9 +81,10 @@ without dynamic validator selection or delegator governance.
 
 ### Execution
 
-| Name                                             | Value                     | Description                                                                                             |
-|--------------------------------------------------|---------------------------|---------------------------------------------------------------------------------------------------------|
-| `MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD` | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS* Maximum number of execution layer delegation operations requests in each payload |
+| Name                                                 | Value                     | Description                                                                                             |
+|------------------------------------------------------|---------------------------|---------------------------------------------------------------------------------------------------------|
+| `MAX_DELEGATION_OPERATIONS_REQUESTS_PER_PAYLOAD`     | `uint64(2**13)` (= 8,192) | *[New in EIPXXXX_eODS* Maximum number of execution layer delegation operations requests in each payload |
+| `MAX_PENDING_WITHDRAWALS_FROM_DELEGATOR_PER_PAYLOAD` | `uint64(2**4)` (= 16)     | *[New in EIPXXXX_eODS* Maximum number of withdraw from delegate operations requests in each payload     |
 
 ### State list lengths
 
@@ -231,6 +232,16 @@ class UndelegationExit(Container):
 
 ```
 
+#### `WithdrawalFromDelegate`
+
+```python
+class WithdrawalFromDelegate(Container):
+    index: WithdrawalIndex
+    delegator_index: DelegatorIndex
+    address: ExecutionAddress
+    amount: Gwei
+```
+
 ### Modified containers
 
 #### `ExecutionRequests`
@@ -314,6 +325,7 @@ class BeaconState(Container):
     pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
     pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]  # [New in Electra:EIP7251]
     # Delegation additions
+    next_withdrawal_from_delegate_index: WithdrawalIndex
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
@@ -326,9 +338,99 @@ class BeaconState(Container):
     undelegations_exit_queue: List[UndelegationExit, PENDING_DELEGATION_OPERATIONS_LIMIT] # [New in EIPXXXX_eODS]
 ```
 
-## Beacon chain state transition function
+#### `ExecutionPayload`
 
+```python
+class ExecutionPayload(Container):
+    parent_hash: Hash32
+    fee_recipient: ExecutionAddress
+    state_root: Bytes32
+    receipts_root: Bytes32
+    logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
+    prev_randao: Bytes32
+    block_number: uint64
+    gas_limit: uint64
+    gas_used: uint64
+    timestamp: uint64
+    extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
+    base_fee_per_gas: uint256
+    block_hash: Hash32
+    transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
+    withdrawals: List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]
+    withdrawals_from_delegate: List[WithdrawalFromDelegate, MAX_WITHDRAWALS_PER_PAYLOAD] # new in eipxxxx_eods
+    # [New in Deneb:EIP4844]
+    blob_gas_used: uint64
+    # [New in Deneb:EIP4844]
+    excess_blob_gas: uint64
+```
+
+
+
+## Beacon chain state transition function
+  
 ### Block processing
+
+#### New `get_expected_withdrawals_from_delegate`
+
+```python
+def get_expected_withdrawals_from_delegate(state: BeaconState, execution_address: ExecutionAddress) -> None:
+    withdrawals: List[Withdrawal] = []
+    postponed_withdrawals = []
+    current_epoch = get_current_epoch(state)
+    withdrawal_index = state.next_withdrawal_from_delegate_index
+    
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+
+    for withdrawal in state.pending_withdrawals_from_delegators:
+        if len(withdrawals) == MAX_PENDING_WITHDRAWALS_FROM_DELEGATOR_PER_PAYLOAD:
+            postponed_withdrawals.push(withdrawal)
+            break  
+          
+        withdrawable_balance = withdrawal.amount
+        
+        if(withdrawal.execution_address == execution_address):
+          delegator_index = delegators_execution_addresses.index(execution_address)
+          delegator = state.delegators[delegator_index]
+            
+          if (delegator.delegator_entry_epoch + MIN_DELEGATOR_WITHDRAWABILITY_DELAY) < current_epoch:
+            postponed_withdrawals.push(withdrawal)
+            break
+              
+          if state.delegators_balances[delegator_index] < withdrawable_balance:
+            withdrawable_balance = state.delegators_balances[delegator_index]
+          
+          withdrawals.append(
+            WithdrawalFromDelegate(
+                    index=withdrawal_index,
+                    delegator_index=delegator_index,
+                    address=execution_address,
+                    amount=withdrawable_balance,
+                )
+          )   
+          withdrawal_index += WithdrawalIndex(1) 
+    
+    return withdrawals, postponed_withdrawals
+```
+
+#### New `process_withdrawals_from_delegate`
+
+```python
+def process_withdrawals_from_delegate(state: BeaconState, payload: ExecutionPayload) -> None:
+    expected_withdrawals_from_delegate, postponed_withdrawals = get_expected_withdrawals_from_delegate(state)
+
+    assert payload.withdrawals_from_delegate == expected_withdrawals_from_delegate
+
+    for withdrawal in expected_withdrawals_from_delegate:
+        decrease_delegator_balance(state, withdrawal.delegator_index, withdrawal.amount)
+
+    state.pending_withdrawals_from_delegators = postponed_withdrawals
+
+    # Update the next withdrawal index if this block contained withdrawals
+    if len(expected_withdrawals_from_delegate) != 0:
+        latest_withdrawal = expected_withdrawals_from_delegate[-1]
+        state.next_withdrawal_from_delegate_index = WithdrawalIndex(latest_withdrawal.index + 1)
+
+```
 
 #### New `process_delegation_operation_request`
 
@@ -377,6 +479,24 @@ def process_delegation_operation_request(state: BeaconState,
         execution_address=delegation_operation_request.execution_address,  
         amount=delegation_operation_request.amount
       )) 
+```
+
+#### Mofified `process_block`
+
+```python
+def process_block(state: BeaconState, block: BeaconBlock) -> None:
+    process_block_header(state, block)
+    # [Modified in Electra:EIP7251]
+    process_withdrawals(state, block.body.execution_payload)
+    # [Added in eipxxxx_eods]
+    process_withdrawals_from_delegate(state, block.body.execution_payload) 
+    # [Modified in Electra:EIP6110]
+    process_execution_payload(state, block.body, EXECUTION_ENGINE)
+    process_randao(state, block.body)
+    process_eth1_data(state, block.body)
+    # [Modified in Electra:EIP6110:EIP7002:EIP7549:EIP7251]
+    process_operations(state, block.body)
+    process_sync_aggregate(state, block.body.sync_aggregate)
 ```
 
 #### Execution payload
@@ -697,30 +817,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
     state.undelegations_exit_queue = postponed
 ```
 
-#### New `process_pending_withdrawals_from_delegators`
 
-```python
-def process_pending_withdrawals_from_delegators(state: BeaconState) -> None:
-    withdrawals_to_postpone = []
-    
-    delegators_execution_addresses = [d.execution_address for d in state.delegators]
-    
-    for withdraw_from_delegator in state.pending_withdrawals_from_delegators:
-      delegator_index = delegators_execution_addresses.index(withdraw_from_delegator.execution_address)
-      delegator = state.delegators[delegator_index]
-      
-      withdraw_amount = withdraw_from_delegator.amount
-      if withdraw_amount > state.delegators_balances[delegator_index]:
-        withdraw_amount = state.delegators_balances[delegator_index]
-      
-      if is_withdrawable_from_delegator(state, delegator):
-         decrease_delegator_balance(state, delegator_index, withdraw_amount)
-      else:
-          withdrawals_to_postpone.append(withdraw_from_delegator)
-  
-    state.pending_withdrawals_from_delegators = withdrawals_to_postpone
-
-```
 #### Modified process_rewards_and_penalties
 
 *Note*: The function `process_rewards_and_penalties` is modified to support delegation logic.
@@ -887,7 +984,6 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
     process_pending_redelegations(state)  # [New in EIPXXXX_eODS]
     process_undelegations_exit_queue(state)  # [New in EIPXXXX_eODS]
-    process_pending_withdrawals_from_delegators(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
