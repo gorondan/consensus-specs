@@ -469,6 +469,10 @@ def process_pending_activate_operators(state: BeaconState) -> None:
       if not (has_correct_credential and is_correct_source_address):
         break
           
+      # Verify validator has minimum initial balance (the bond) 
+      if validator.effective_balance < MIN_OPERATOR_BALANCE
+        break
+          
       # Verify exit has not been initiated
       if validator.exit_epoch != FAR_FUTURE_EPOCH:
         break
