@@ -80,6 +80,51 @@ def undelegate_from_validator(state: BeaconState, undelegation_exit: Undelegatio
     return (amount_to_undelegate, total_delegated_at_withdrawal)
 ```
 
+
+### New `slash_exit_queue`
+
+```python
+def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: Gwei) -> Gwei:
+    current_epoch = get_current_epoch(state)
+    list_to_slash = [item for item in state.exit_queue if item.validator_pubkey == validator_pubkey and item.exit_queue_epoch < current_epoch]
+    total_slashed_in_queue = 0
+    
+    for index in range(len(list_to_slash)):
+      exit_item = state.list_to_slash[index]
+      
+      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
+      to_slash = delegated_quota * penalty
+          
+      total_slashed_in_queue += to_slash
+      
+      state.exit_queue[index].undelegated_amount -= to_slash
+    
+    return total_slashed_in_queue
+```
+
+### New `slash_delegated_validator_and_exit_queue`
+
+```python
+def slash_delegated_validator_and_exit_queue(state: BeaconState, validator_index: ValidatorIndex, validator_pubkey: BLSPubkey, penalty: Gwei) -> None:
+    # slash the exit queue
+    slashed_in_queue = slash_exit_queue(state, validator_pubkey, penalty)
+    
+    rest_to_slash = penalty - slashed_in_queue
+    
+    delegated_validator = get_delegated_validator(state, validator_pubkey)
+    
+    validator_penalty = delegated_validator.delegated_validator_quota * rest_to_slash
+    delegators_penalty = rest_to_slash - validator_penalty
+    
+    # slash the operator
+    decrease_balance(state, ValidatorIndex(validator_index), validator_penalty)
+    
+    # slash the delegations
+    apply_delegations_slashing(delegated_validator, delegators_penalty)
+
+```
+
+
 ### New `settle_undelegation`
 
 ```python

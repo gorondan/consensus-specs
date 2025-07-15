@@ -553,6 +553,45 @@ def get_delegated_validator(state: BeaconState, validator_pubkey: BLSPubkey) -> 
 
 ### Beacon state mutators
 
+#### Modified `slash_validator`
+
+```python
+def slash_validator(
+    state: BeaconState, slashed_index: ValidatorIndex, whistleblower_index: ValidatorIndex = None
+) -> None:
+    """
+    Slash the validator with index ``slashed_index``.
+    """
+    epoch = get_current_epoch(state)
+    initiate_validator_exit(state, slashed_index)
+    validator = state.validators[slashed_index]
+    validator.slashed = True
+    validator.withdrawable_epoch = max(
+        validator.withdrawable_epoch, Epoch(epoch + EPOCHS_PER_SLASHINGS_VECTOR)
+    )
+    state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
+    # [Modified in Electra:EIP7251]
+    slashing_penalty = validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA
+    
+    if validator.is_operator:
+      slash_delegated_validator_and_exit_queue(state, slashed_index, validator.pubkey, slashing_penalty)
+    else:    
+      decrease_balance(state, slashed_index, slashing_penalty)
+
+    # Apply proposer and whistleblower rewards
+    proposer_index = get_beacon_proposer_index(state)
+    if whistleblower_index is None:
+        whistleblower_index = proposer_index
+    # [Modified in Electra:EIP7251]
+    whistleblower_reward = Gwei(
+        validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
+    )
+    proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
+    increase_balance(state, proposer_index, proposer_reward)
+    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
+
+```
+
 ### Epoch processing
 
 #### New `process_pending_deposits_to_delegate`
@@ -877,44 +916,9 @@ def process_slashings(state: BeaconState) -> None:
             
             # [New in EIPXXXX_eODS]
             if validator.is_operator: 
-                # slash the exit queue
-                slashed_in_queue = slash_exit_queue(state, validator.pubkey, penalty)
-                
-                rest_to_slash = penalty - slashed_in_queue
-                
-                delegated_validator = get_delegated_validator(state, validator.pubkey)
-              
-                validator_penalty = delegated_validator.delegated_validator_quota * rest_to_slash
-                delegators_penalty =  rest_to_slash - validator_penalty
-
-                # slash the validator
-                decrease_balance(state, ValidatorIndex(index), validator_penalty)
-                
-                # slash the delegations
-                apply_delegations_slashing(delegated_validator, delegators_penalty)
+                slash_delegated_validator_and_exit_queue(state, index, validator.pubkey, penalty)
             else:
                 decrease_balance(state, ValidatorIndex(index), penalty)
-```
-
-#### New `slash_exit_queue`
-
-```python
-def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: Gwei) -> Gwei:
-    current_epoch = get_current_epoch(state)
-    list_to_slash = [item for item in state.exit_queue if item.validator_pubkey == validator_pubkey and item.exit_queue_epoch < current_epoch]
-    total_slashed_in_queue = 0
-    
-    for index in range(len(list_to_slash)):
-      exit_item = state.list_to_slash[index]
-      
-      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
-      to_slash = delegated_quota * penalty
-          
-      total_slashed_in_queue += to_slash
-      
-      state.exit_queue[index].undelegated_amount -= to_slash
-    
-    return total_slashed_in_queue
 ```
 
 #### Modified `process_effective_balance_updates`
