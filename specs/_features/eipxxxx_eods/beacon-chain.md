@@ -881,14 +881,8 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
         for index in range(len(state.validators)):
             validator = state.validators[index]
             if validator.is_operator:
-              delegated_validator = get_delegated_validator(state, validator.pubkey)
-              validator_quota = delegated_validator.delegated_validator_quota
-              # Applies proportional rewards and penalties 
-              apply_delegations_rewards(rewards[index] - rewards[index] * validator_quota, delegated_validator)
-              apply_delegations_penalties(penalties[index] - penalties[index] * validator_quota, delegated_validator)
-              
-              increase_balance(state, ValidatorIndex(index), rewards[index] * validator_quota)
-              decrease_balance(state, ValidatorIndex(index), penalties[index] * validator_quota)
+              reward_delegated_validator_and_exit_queue(state, index, validator.pubkey, rewards[index])
+              penalize_delegated_validator_and_exit_queue(state, index, validator.pubkey, penalties[index])
             else:
               increase_balance(state, ValidatorIndex(index), rewards[index])
               decrease_balance(state, ValidatorIndex(index), penalties[index])
