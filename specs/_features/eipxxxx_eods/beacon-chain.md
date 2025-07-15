@@ -553,6 +553,23 @@ def get_delegated_validator(state: BeaconState, validator_pubkey: BLSPubkey) -> 
 
 ### Beacon state mutators
 
+#### New `initiate_delegated_balances_exit`
+
+```python
+def initiate_delegated_balances_exit(state: BeaconState, validator_pubkey: BLSPubkey, exit_epoch: Epoch, withdrawable_epoch: Epoch)-> None:
+    delegators_execution_addresses = [d.execution_address for d in state.delegators]
+    delegated_validator = get_delegated_validator(state, validator_pubkey)
+
+    for delegator_index, delegated_amount in delegated_validator.delegated_balances:
+        state.undelegations_exit_queue.append(
+          UndelegationExit(
+            amount=delegated_amount,
+            exit_queue_epoch=exit_epoch,
+            withdrawable_epoch=withdrawable_epoch,
+            execution_address=delegators_execution_addresses[delegator_index],
+            validator_pubkey=validator_pubkey))
+```
+
 #### Modified `slash_validator`
 
 ```python
@@ -601,6 +618,29 @@ def slash_validator(
     else:
         increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 
+```
+
+#### Modified `initiate_validator_exit`
+
+```python
+def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
+    """
+    Initiate the exit of the validator with index ``index``.
+    """
+    # Return if validator already initiated exit
+    validator = state.validators[index]
+    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        return
+
+    # Compute exit queue epoch [Modified in Electra:EIP7251]
+    exit_queue_epoch = compute_exit_epoch_and_update_churn(state, validator.effective_balance)
+
+    # Set validator exit epoch and withdrawable epoch
+    validator.exit_epoch = exit_queue_epoch
+    validator.withdrawable_epoch = Epoch(validator.exit_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+
+    if validator.is_operator:
+       initiate_delegated_balances_exit(state, validator.pubkey, validator.exit_epoch, validator.withdrawable_epoch) 
 ```
 
 ### Epoch processing
