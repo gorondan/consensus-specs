@@ -587,8 +587,19 @@ def slash_validator(
         validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
     )
     proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
-    increase_balance(state, proposer_index, proposer_reward)
-    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
+    
+    proposer = state.validators[proposer_index]
+    whistleblower = state.validators[whistleblower_index]
+    
+    if proposer.is_operator:
+        reward_delegated_validator_and_exit_queue(state, proposer_index, proposer.pubkey, proposer_reward)
+    else:
+        increase_balance(state, proposer_index, proposer_reward)
+      
+    if whistleblower.is_operator:
+        reward_delegated_validator_and_exit_queue(state, whistleblower_index, whistleblower.pubkey,  Gwei(whistleblower_reward - proposer_reward))
+    else:
+        increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 
 ```
 
