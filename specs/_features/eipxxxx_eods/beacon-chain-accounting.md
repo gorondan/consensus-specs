@@ -61,7 +61,8 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
 ```python
 def undelegate_from_validator(state: BeaconState, undelegation_exit: UndelegationExit) -> (Gwei, Gwei):
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
-    
+    validators = [d.pubkey for d in state.validators]
+    validator_index = ValidatorIndex(validators.index(undelegation_exit.validator_pubkey))
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
     delegator_index = DelegatorIndex(delegators_execution_addresses.index(undelegation_exit.execution_address))
     
@@ -71,13 +72,13 @@ def undelegate_from_validator(state: BeaconState, undelegation_exit: Undelegatio
     
     amount_to_undelegate = min(requested_to_undelegate, max_undelegable)
     
-    total_delegated_at_withdrawal = delegated_validator.total_delegated_balance
+    total_amount_at_exit = delegated_validator.total_delegated_balance + state.balances[validator_index]
     delegated_validator.delegated_balances[delegator_index] -= amount_to_undelegate
     delegated_validator.total_delegated_balance -= amount_to_undelegate
     
     recalculate_delegators_quotas(state, delegated_validator)
     
-    return (amount_to_undelegate, total_delegated_at_withdrawal)
+    return (amount_to_undelegate, total_amount_at_exit)
 ```
 
 
@@ -92,7 +93,7 @@ def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: G
     for index in range(len(list_to_slash)):
       exit_item = state.list_to_slash[index]
       
-      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
+      delegated_quota = exit_item.amount / exit_item.total_amount_at_exit
       to_slash = delegated_quota * penalty
           
       total_slashed_in_queue += to_slash
@@ -114,7 +115,7 @@ def reward_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, reward: G
     for index in range(len(list_to_reward)):
       exit_item = state.list_to_reward[index]
       
-      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
+      delegated_quota = exit_item.amount / exit_item.total_amount_at_exit
       to_reward = delegated_quota * reward
           
       total_rewarded_in_queue += to_reward
@@ -136,7 +137,7 @@ def penalize_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty
     for index in range(len(list_to_penalize)):
       exit_item = state.list_to_penalize[index]
       
-      delegated_quota = exit_item.amount / exit_item.total_delegated_at_withdrawal
+      delegated_quota = exit_item.amount / exit_item.total_amount_at_exit
       to_penalize = delegated_quota * penalty
           
       total_penalized_in_queue += to_penalize

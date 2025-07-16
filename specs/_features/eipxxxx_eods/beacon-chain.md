@@ -230,8 +230,8 @@ class PendingWithdrawFromDelegatorRequest(Container):
 ```python
 class UndelegationExit(Container):
     amount: Gwei
-    total_delegated_at_withdrawal: Gwei
-    execution_address: BLSPubkey
+    total_amount_at_exit: Gwei
+    execution_address: ExecutionAddress
     validator_pubkey: BLSPubkey
     exit_queue_epoch: Epoch
     withdrawable_epoch: Epoch
@@ -724,43 +724,41 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         if request_pubkey not in validator_pubkeys:
             break
 
-        validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
-        validator = state.validators[validator_index]
+      # Ensure the validator is not already an operator
+      if validator.is_operator:
+        break
+      
+      # Verify request has validator ownership and proper withdrawal credentials
+      has_correct_credential = has_compounding_withdrawal_credential(validator)
+      is_correct_source_address = (
+              validator.withdrawal_credentials[12:] == pending_activation.execution_address
+      )
+      if not (has_correct_credential and is_correct_source_address):
+        break
+          
+      # Verify validator has minimum initial balance (the operator's bond) 
+      if state.balances[validator_index] < MIN_OPERATOR_BALANCE:
+        break 
+        
+      # Verify exit has not been initiated
+      if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        break
+          
+      # Ensure the validator is not slashed
+      if validator.slashed:
+        break
+   
+      validator.is_operator = True
+      
+      delegated_validator =  DelegatedValidator(
+        validator = validator,
+        delegated_validator_quota = 1,
+        delegators_quotas = [],
+        delegated_balances = [],
+        total_delegated_balance = 0,
+        fee_quotient = pending_activation.fee_quotient
+      ) 
 
-        # Ensure the validator is not already an operator
-        if validator.is_operator:
-            break
-
-        # Verify request has validator ownership and proper withdrawal credentials
-        has_correct_credential = has_compounding_withdrawal_credential(validator)
-        is_correct_source_address = (
-                validator.withdrawal_credentials[12:] == pending_activation.execution_address
-        )
-        if not (has_correct_credential and is_correct_source_address):
-            break
-
-        # Verify validator has minimum initial balance (the operator's bond) 
-        if state.balances[validator_index] < MIN_OPERATOR_BALANCE
-            break
-
-            # Verify exit has not been initiated
-        if validator.exit_epoch != FAR_FUTURE_EPOCH:
-            break
-
-        # Ensure the validator is not slashed
-        if validator.slashed:
-            break
-
-        validator.is_operator = True
-
-        delegated_validator = DelegatedValidator(
-            validator=validator,
-            delegated_validator_quota=1,
-            delegators_quotas=[],
-            delegated_balances=[],
-            total_delegated_balance=0,
-            fee_quotient=pending_activation.fee_quotient
-        )
     state.delegated_validators.append(delegated_validator)
     state.pending_activate_operator = []
 ```
@@ -936,10 +934,10 @@ def process_undelegations_exit_queue(state: BeaconState) -> None:
             if current_epoch >= undelegation_exit.exit_queue_epoch:
                 # time to undelegate
                 undelegation_exit.exit_queue_epoch = FAR_FUTURE_EPOCH
-                undelegated_amount, total_delegated_at_withdrawal = undelegate_from_validator(state, undelegation_exit)
+                undelegated_amount, total_amount_at_exit = undelegate_from_validator(state, undelegation_exit)
                 undelegation_exit.amount = undelegated_amount
-                undelegation_exit.total_delegated_at_withdrawal = total_delegated_at_withdrawal
-
+                undelegation_exit.total_amount_at_exit = total_amount_at_exit
+               
                 # we postpone it, so we can test it for withdrawability next epoch
                 postponed.append(undelegation_exit)
                 continue
