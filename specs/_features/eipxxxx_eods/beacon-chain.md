@@ -222,8 +222,8 @@ class PendingWithdrawFromDelegatorRequest(Container):
 ```python
 class UndelegationExit(Container):
     amount: Gwei
-    total_delegated_at_withdrawal: Gwei
-    execution_address: BLSPubkey
+    total_amount_at_exit: Gwei
+    execution_address: ExecutionAddress
     validator_pubkey: BLSPubkey
     exit_queue_epoch: Epoch
     withdrawable_epoch: Epoch
@@ -686,7 +686,7 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         break
           
       # Verify validator has minimum initial balance (the operator's bond) 
-      if state.balances[validator_index] < MIN_OPERATOR_BALANCE
+      if state.balances[validator_index] < MIN_OPERATOR_BALANCE:
         break 
         
       # Verify exit has not been initiated
@@ -881,9 +881,9 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
             if current_epoch >= undelegation_exit.exit_queue_epoch:
                 # time to undelegate
                 undelegation_exit.exit_queue_epoch = FAR_FUTURE_EPOCH
-                undelegated_amount, total_delegated_at_withdrawal = undelegate_from_validator(state, undelegation_exit)
+                undelegated_amount, total_amount_at_exit = undelegate_from_validator(state, undelegation_exit)
                 undelegation_exit.amount = undelegated_amount
-                undelegation_exit.total_delegated_at_withdrawal = total_delegated_at_withdrawal
+                undelegation_exit.total_amount_at_exit = total_amount_at_exit
                
                 # we postpone it, so we can test it for withdrawability next epoch
                 postponed.append(undelegation_exit)
