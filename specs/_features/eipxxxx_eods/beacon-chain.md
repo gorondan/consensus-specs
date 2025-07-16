@@ -1121,6 +1121,7 @@ def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
         validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
         increase_balance(state, validator_index, deposit.amount)
     # [New in EIPXXXX_eODS]
+    validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
     validator = state.validators[validator_index]
     if validator.is_operator:
         recalculate_delegators_quotas(state, validator)
