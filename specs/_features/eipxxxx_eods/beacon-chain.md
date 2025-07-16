@@ -704,7 +704,7 @@ def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
 
     # Set validator exit epoch and withdrawable epoch
     validator.exit_epoch = exit_queue_epoch
-    validator.withdrawable_epoch = Epoch(validator.exit_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
     if validator.is_operator:
         initiate_delegated_balances_exit(state, validator.pubkey, validator.exit_epoch, validator.withdrawable_epoch) 
@@ -1077,16 +1077,6 @@ def is_validator_delegable(state: BeaconState, validator: Validator) -> boolean:
         return False
 
     return True
-```
-
-#### New `get_validator_index_by_pubkey`
-
-```python
-def get_validator_index_by_pubkey(pubkey: BLSPubkey) -> ValidatorIndex:
-    validator_pubkeys = [v.pubkey for v in state.validators]
-    validator_index = ValidatorIndex(validator_pubkeys.index(pubkey))
-
-    return validator_index
 ```
 
 #### Modified `process_epoch`
