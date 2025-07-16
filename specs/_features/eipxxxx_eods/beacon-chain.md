@@ -485,7 +485,7 @@ def process_delegation_operation_request(state: BeaconState,
       )) 
 ```
 
-#### Mofified `process_block`
+#### Modified `process_block`
 
 ```python
 def process_block(state: BeaconState, block: BeaconBlock) -> None:
@@ -501,6 +501,48 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
     # [Modified in Electra:EIP6110:EIP7002:EIP7549:EIP7251]
     process_operations(state, block.body)
     process_sync_aggregate(state, block.body.sync_aggregate)
+```
+
+##### Modified `process_withdrawals`
+
+*Note*: The function `process_withdrawals` is modified to support EIPXXXX_eODS.
+
+```python
+def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
+    # [Modified in Electra:EIP7251]
+    expected_withdrawals, processed_partial_withdrawals_count = get_expected_withdrawals(state)
+
+    assert payload.withdrawals == expected_withdrawals
+
+    for withdrawal in expected_withdrawals:
+        decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
+        # [New in EIPXXXX_eODS]
+        validator = state.validators[withdrawal.validator_index]
+        if validator.is_operator:
+            recalculate_delegators_quotas(state, validator)
+            
+    # [New in Electra:EIP7251] Update pending partial withdrawals
+    state.pending_partial_withdrawals = state.pending_partial_withdrawals[
+        processed_partial_withdrawals_count:
+    ]
+
+    # Update the next withdrawal index if this block contained withdrawals
+    if len(expected_withdrawals) != 0:
+        latest_withdrawal = expected_withdrawals[-1]
+        state.next_withdrawal_index = WithdrawalIndex(latest_withdrawal.index + 1)
+
+    # Update the next validator index to start the next withdrawal sweep
+    if len(expected_withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
+        # Next sweep starts after the latest withdrawal's validator index
+        next_validator_index = ValidatorIndex(
+            (expected_withdrawals[-1].validator_index + 1) % len(state.validators)
+        )
+        state.next_withdrawal_validator_index = next_validator_index
+    else:
+        # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
+        next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+        next_validator_index = ValidatorIndex(next_index % len(state.validators))
+        state.next_withdrawal_validator_index = next_validator_index
 ```
 
 #### Execution payload
@@ -915,7 +957,6 @@ def process_undelegations_exit_queue(state: BeaconState) -> None :
     state.undelegations_exit_queue = postponed
 ```
 
-
 #### Modified process_rewards_and_penalties
 
 *Note*: The function `process_rewards_and_penalties` is modified to support delegation logic.
@@ -1047,6 +1088,64 @@ def process_epoch(state: BeaconState) -> None:
     process_historical_summaries_update(state)
     process_participation_flag_updates(state)
     process_sync_committee_updates(state)
+```
+
+#### Modified `apply_pending_deposit`
+```python
+def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
+    """
+    Applies ``deposit`` to the ``state``.
+    """
+    validator_pubkeys = [v.pubkey for v in state.validators]
+    if deposit.pubkey not in validator_pubkeys:
+        # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+        if is_valid_deposit_signature(
+            deposit.pubkey, deposit.withdrawal_credentials, deposit.amount, deposit.signature
+        ):
+            add_validator_to_registry(
+                state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount
+            )
+    else:
+        validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
+        increase_balance(state, validator_index, deposit.amount)
+    # [New in EIPXXXX_eODS]
+    validator = state.validators[validator_index]
+    if validator.is_operator:
+        recalculate_delegators_quotas(state, validator)
+```
+
+#### Modified `process_pending_consolidations`
+
+```python
+def process_pending_consolidations(state: BeaconState) -> None:
+    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_pending_consolidation = 0
+    for pending_consolidation in state.pending_consolidations:
+        source_validator = state.validators[pending_consolidation.source_index]
+        target_validator = state.validators[pending_consolidation.target_index] # [New in EIPXXXX_eODS]
+        if source_validator.slashed:
+            next_pending_consolidation += 1
+            continue
+        if source_validator.withdrawable_epoch > next_epoch:
+            break
+
+        # Calculate the consolidated balance
+        source_effective_balance = min(
+            state.balances[pending_consolidation.source_index], source_validator.effective_balance
+        )
+
+        # Move active balance to target.
+        decrease_balance(state, pending_consolidation.source_index, source_effective_balance)
+        if source_validator.is_operator:
+            recalculate_delegators_quotas(state, source_validator) # [New in EIPXXXX_eODS]
+            
+        increase_balance(state, pending_consolidation.target_index, source_effective_balance)
+        if target_validator.is_operator:
+            recalculate_delegators_quotas(state, target_validator) # [New in EIPXXXX_eODS]
+        
+        next_pending_consolidation += 1
+
+    state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
 ```
 
 #### Modified `process_registry_updates`
