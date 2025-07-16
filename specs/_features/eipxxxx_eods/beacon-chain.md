@@ -735,6 +735,9 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         # check if validator with given pubkey exists 
         validator_pubkeys = [v.pubkey for v in state.validators]
         request_pubkey = pending_activation.validator_pubkey
+        validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkeyy))
+        validator = state.validators[validator_index]
+        
         if request_pubkey not in validator_pubkeys:
             break
 
@@ -868,7 +871,7 @@ def process_pending_undelegations(state: BeaconState) -> None:
 
         # Calculates the undelegation's exit and withdrawability epochs
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, requested_to_undelegate)
-        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+        withdrawable_epoch = Epoch(exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
         # Appends the undelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
@@ -918,7 +921,7 @@ def process_pending_redelegations(state: BeaconState) -> None:
 
             # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
-        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+        withdrawable_epoch = Epoch(exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
         # Appends the redelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
