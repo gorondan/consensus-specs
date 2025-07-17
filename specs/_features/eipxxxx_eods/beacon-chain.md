@@ -133,12 +133,6 @@ without dynamic validator selection or delegator governance.
 | `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | `Bytes1('0x05')` |
 | `EARLY_LIQUIDITY_REQUEST_TYPE`         | `Bytes1('0x06')` |
 
-### Domain types
-
-| Name                         | Value                      |
-|------------------------------|----------------------------|
-| `DOMAIN_DEPOSIT_TO_DELEGATE` | `DomainType('0x07000000')` |
-
 ## Configuration
 
 ### Time parameters
