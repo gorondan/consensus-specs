@@ -132,13 +132,6 @@ without dynamic validator selection or delegator governance.
 | `REDELEGATE_REQUEST_TYPE`              | `Bytes1('0x04')` |
 | `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | `Bytes1('0x05')` |
 | `EARLY_LIQUIDITY_REQUEST_TYPE`         | `Bytes1('0x06')` |
-| `EXIT_REQUEST_TYPE`                    | `Bytes1('0x07')` |
-
-### Domain types
-
-| Name                         | Value                      |
-|------------------------------|----------------------------|
-| `DOMAIN_DEPOSIT_TO_DELEGATE` | `DomainType('0x07000000')` |
 
 ## Configuration
 
@@ -704,7 +697,7 @@ def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
 
     # Set validator exit epoch and withdrawable epoch
     validator.exit_epoch = exit_queue_epoch
-    validator.withdrawable_epoch = Epoch(validator.exit_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
     if validator.is_operator:
         initiate_delegated_balances_exit(state, validator.pubkey, validator.exit_epoch, validator.withdrawable_epoch) 
@@ -735,6 +728,9 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         # check if validator with given pubkey exists 
         validator_pubkeys = [v.pubkey for v in state.validators]
         request_pubkey = pending_activation.validator_pubkey
+        validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkeyy))
+        validator = state.validators[validator_index]
+        
         if request_pubkey not in validator_pubkeys:
             break
 
@@ -868,7 +864,7 @@ def process_pending_undelegations(state: BeaconState) -> None:
 
         # Calculates the undelegation's exit and withdrawability epochs
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, requested_to_undelegate)
-        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+        withdrawable_epoch = Epoch(exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
         # Appends the undelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
@@ -918,7 +914,7 @@ def process_pending_redelegations(state: BeaconState) -> None:
 
             # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_queue_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
-        withdrawable_epoch = Epoch(exit_queue_epoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+        withdrawable_epoch = Epoch(exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
         # Appends the redelegation in the undelegation exit queue
         state.undelegations_exit_queue.append(
@@ -1077,16 +1073,6 @@ def is_validator_delegable(state: BeaconState, validator: Validator) -> boolean:
         return False
 
     return True
-```
-
-#### New `get_validator_index_by_pubkey`
-
-```python
-def get_validator_index_by_pubkey(pubkey: BLSPubkey) -> ValidatorIndex:
-    validator_pubkeys = [v.pubkey for v in state.validators]
-    validator_index = ValidatorIndex(validator_pubkeys.index(pubkey))
-
-    return validator_index
 ```
 
 #### Modified `process_epoch`

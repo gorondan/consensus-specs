@@ -243,7 +243,9 @@ def settle_undelegation(state: BeaconState, undelegation_exit: UndelegationExit)
 
 ```python
 def recalculate_delegators_quotas(state: BeaconState, delegated_validator: DelegatedValidator) -> None:
-    validator_index = get_validator_index_by_pubkey(delegated_validator.validator.pubkey)
+    
+    validator_pubkeys = [v.pubkey for v in state.validators]
+    validator_index = ValidatorIndex(validator_pubkeys.index(delegated_validator.validator.pubkey))
     
     if delegated_validator.total_delegated_balance == 0:
         delegated_validator.delegated_validator_quota = 1
