@@ -132,7 +132,6 @@ without dynamic validator selection or delegator governance.
 | `REDELEGATE_REQUEST_TYPE`              | `Bytes1('0x04')` |
 | `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | `Bytes1('0x05')` |
 | `EARLY_LIQUIDITY_REQUEST_TYPE`         | `Bytes1('0x06')` |
-| `EXIT_REQUEST_TYPE`                    | `Bytes1('0x07')` |
 
 ### Domain types
 
