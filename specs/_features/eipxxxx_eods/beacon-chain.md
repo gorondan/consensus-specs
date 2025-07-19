@@ -1099,32 +1099,6 @@ def process_epoch(state: BeaconState) -> None:
     process_sync_committee_updates(state)
 ```
 
-#### Modified `apply_pending_deposit`
-
-```python
-def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
-    """
-    Applies ``deposit`` to the ``state``.
-    """
-    validator_pubkeys = [v.pubkey for v in state.validators]
-    if deposit.pubkey not in validator_pubkeys:
-        # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-        if is_valid_deposit_signature(
-                deposit.pubkey, deposit.withdrawal_credentials, deposit.amount, deposit.signature
-        ):
-            add_validator_to_registry(
-                state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount
-            )
-    else:
-        validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
-        increase_balance(state, validator_index, deposit.amount)
-    # [New in EIPXXXX_eODS]
-    validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
-    validator = state.validators[validator_index]
-    if validator.is_operator:
-        recalculate_delegators_quotas(state, validator)
-```
-
 #### Modified `process_pending_consolidations`
 
 ```python
@@ -1216,13 +1190,4 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     for_ops(body.execution_requests.consolidations, process_consolidation_request)  # [New in Electra:EIP7251]
     for_ops(body.execution_requests.delegation_operations,
             process_delegation_operation_request)  # [New in EIPXXXX_eODS]
-```
-
-##### Deposits
-
-###### New `is_withdrawable_from_delegator`
-
-```python
-def is_withdrawable_from_delegator(state: BeaconState, delegator: Delegator) -> bool:
-    return state.epoch > delegator.delegator_entry_epoch + MIN_DELEGATOR_WITHDRAWABILITY_DELAY
 ```
