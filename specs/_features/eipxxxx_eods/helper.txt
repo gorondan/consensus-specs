@@ -48,48 +48,32 @@ pending_deposits_to_delegate, in BC)
     process_pending_deposits_to_delegate
         Processes pending_deposits_to_delegate items, checking for limits and churns. Will call apply_pending_deposit upon success.
 
-    apply_pending_deposit
-        Applies the deposit itself, after checking signature validity. Decides if a new Delegator or top up is needed.
-
     process_epoch (modified)
         Added a call to our process_pending_deposits_to_delegate.
 
     process_operations (modified)
         Added a call to out process_deposit_to_delegate_request.
 
-    is_valid_deposit_signature
-        Checks signature validity
-
-    is_withdrawable_from_delegator
-        TODO: not used!!
-
-    deposit_to_delegator_balance (BCA)
-        TODO: remove this, no longer used
-
-    compute_pending_rewards
-        TODO: not used
-
-    get_delegator_index
-        TODO: remove, not needed
-
     register_new_delegator
         Adds a new instance of Delegator into the delegators list, and sets its balance to 0
 
     delegate_to_validator
-        TODO: not used
+        Reduces delegator’s undelegated balance and increases delegated validator’s delegated balance
 
-    withdraw_from_validator
-        TODO: not used
+    undelegate_from_validator
+        Reduces delegated validator’s delegated_balance and credits the undelegated amount minus operator fee back to the delegator.
+        Credits operator fee to the delegated validator
+
+    redelegate
+    Initiates a sequence of one undelegation followed by one delegation, from source validator to target validator.
+    Credits operator fee to source delegated validator
 
     withdraw_from_delegator
-        TODO: implement
+         Withdraws undelegated balance back to delegator's execution address
 
     # Perks
-    fast_redelegate
-        TODO: not used, implement
+    early liquidity
 
-    fast_withdrawal
-        TODO: not used, implement
 
     delegation_operations
 
@@ -98,11 +82,14 @@ pending_deposits_to_delegate, in BC)
 | `ACTIVATE_OPERATOR_REQUEST_TYPE`       | NO        | ok
 | `DEPOSIT_TO_DELEGATE_REQUEST_TYPE`     | NO        | ok
 | `DELEGATE_REQUEST_TYPE`                | YES       | ok
-| `UNDELEGATE_REQUEST_TYPE`              | YES       | -
-| `REDELEGATE_REQUEST_TYPE`              | YES       |
-| `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | NO        |
-| `EARLY_LIQUIDITY_REQUEST_TYPE`         | NO        |
-| `EXIT_REQUEST_TYPE`                    | NO        |
+| `UNDELEGATE_REQUEST_TYPE`              | YES       | ok
+| `REDELEGATE_REQUEST_TYPE`              | YES       | ok
+| `WITHDRAW_FROM_DELEGATOR_REQUEST_TYPE` | NO*       | ok
+| `EARLY_LIQUIDITY_REQUEST_TYPE`         | NO*       | -
+| `EXIT_REQUEST_TYPE`                    | NO        | -
+
+(*) Bounded to 16/block in order to keep to the minimum the overhead delegation-related withdrawals add to the
+execution payload's footprint. This way, the gas cost for these system-level operations can be zero.
 
     --- DEPOSIT_TO_DELEGATE operations
         DEPOSIT
