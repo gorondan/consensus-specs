@@ -83,6 +83,8 @@ def undelegate_from_validator(state: BeaconState, undelegation_exit: Undelegatio
     return (amount_to_undelegate, total_amount_at_exit)
 ```
 
+## Accounting helper functions
+
 ### New `slash_exit_queue`
 
 ```python
@@ -240,8 +242,6 @@ def settle_undelegation(state: BeaconState, undelegation_exit: UndelegationExit)
 
     return delegator_amount
  ```
-
-## Accounting helper functions
 
 ### New `recalculate_delegators_quotas`
 
