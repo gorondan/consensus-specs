@@ -29,5 +29,5 @@ class PayloadAttributes(object):
     prev_randao: Bytes32
     suggested_fee_recipient: ExecutionAddress
     withdrawals: Sequence[Withdrawal]  
-    withdrawals_from_delegate: Sequence[WithdrawalFromDelegate]  # [New in eipxxxx_eods]
+    withdrawals_from_delegators: Sequence[WithdrawalFromDelegators]  # [New in eipxxxx_eods]
 ```

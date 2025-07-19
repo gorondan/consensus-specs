@@ -79,14 +79,14 @@ def prepare_execution_payload(
 
     # Set the forkchoice head and initiate the payload build process
     withdrawals, _ = get_expected_withdrawals(state)  # [Modified in EIP-7251]
-    withdrawals_from_delegate, _ = get_expected_withdrawals_from_delegate(state)  # [Modified in eipxxxx_eods]
+    withdrawals_from_delegators, _ = get_expected_withdrawals_from_delegators(state)  # [Modified in eipxxxx_eods]
 
     payload_attributes = PayloadAttributes(
         timestamp=compute_time_at_slot(state, state.slot),
         prev_randao=get_randao_mix(state, get_current_epoch(state)),
         suggested_fee_recipient=suggested_fee_recipient,
         withdrawals=withdrawals,
-        withdrawals_from_delegate=withdrawals_from_delegate,
+        withdrawals_from_delegators=withdrawals_from_delegators,
         parent_beacon_block_root=hash_tree_root(state.latest_block_header),
     )
     return execution_engine.notify_forkchoice_updated(
