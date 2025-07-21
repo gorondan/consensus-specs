@@ -67,7 +67,7 @@ def delegate_to_validator(state: BeaconState, delegator_index: DelegatorIndex, v
 ### New `undelegate_from_validator`
 
 ```python
-def undelegate_from_validator(state: BeaconState, undelegation_exit: UndelegationExit) -> (Gwei, Gwei):
+def undelegate_from_validator(state: BeaconState, undelegation_exit: DelegationExitItem) -> (Gwei, Gwei):
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
     validators = [d.pubkey for d in state.validators]
     validator_index = ValidatorIndex(validators.index(undelegation_exit.validator_pubkey))
@@ -96,7 +96,7 @@ def undelegate_from_validator(state: BeaconState, undelegation_exit: Undelegatio
 ```python
 def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: Gwei) -> Gwei:
     current_epoch = get_current_epoch(state)
-    list_to_slash = [item for item in state.exit_queue if
+    list_to_slash = [item for item in state.delegation_exit_queue if
                      item.validator_pubkey == validator_pubkey and item.exit_queue_epoch < current_epoch]
     total_slashed_in_queue = 0
 
@@ -108,7 +108,7 @@ def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: G
 
         total_slashed_in_queue += to_slash
 
-        state.exit_queue[index].undelegated_amount -= to_slash
+        state.delegation_exit_queue[index].undelegated_amount -= to_slash
 
     return total_slashed_in_queue
 ```
@@ -118,7 +118,7 @@ def slash_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: G
 ```python
 def reward_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, reward: Gwei) -> Gwei:
     current_epoch = get_current_epoch(state)
-    list_to_reward = [item for item in state.exit_queue if
+    list_to_reward = [item for item in state.delegation_exit_queue if
                       item.validator_pubkey == validator_pubkey and item.exit_queue_epoch > current_epoch]
     total_rewarded_in_queue = 0
 
@@ -130,7 +130,7 @@ def reward_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, reward: G
 
         total_rewarded_in_queue += to_reward
 
-        state.exit_queue[index].undelegated_amount += to_reward
+        state.delegation_exit_queue[index].undelegated_amount += to_reward
 
     return total_rewarded_in_queue
 ```
@@ -140,7 +140,7 @@ def reward_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, reward: G
 ```python
 def penalize_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty: Gwei) -> Gwei:
     current_epoch = get_current_epoch(state)
-    list_to_penalize = [item for item in state.exit_queue if
+    list_to_penalize = [item for item in state.delegation_exit_queue if
                         item.validator_pubkey == validator_pubkey and item.exit_queue_epoch > current_epoch]
     total_penalized_in_queue = 0
 
@@ -152,7 +152,7 @@ def penalize_exit_queue(state: BeaconState, validator_pubkey: BLSPubkey, penalty
 
         total_penalized_in_queue += to_penalize
 
-        state.exit_queue[index].undelegated_amount -= to_penalize
+        state.delegation_exit_queue[index].undelegated_amount -= to_penalize
 
     return total_penalized_in_queue
 ```
@@ -229,7 +229,7 @@ def penalize_delegated_validator_and_exit_queue(state: BeaconState, validator_in
 ### New `settle_undelegation`
 
 ```python
-def settle_undelegation(state: BeaconState, undelegation_exit: UndelegationExit) -> Gwei:
+def settle_undelegation(state: BeaconState, undelegation_exit: DelegationExitItem) -> Gwei:
     delegated_validator = get_delegated_validator(state, undelegation_exit.validator_pubkey)
 
     delegators_execution_addresses = [d.execution_address for d in state.delegators]
