@@ -342,7 +342,7 @@ class BeaconState(Container):
     delegators: List[Delegator, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegators_balances: List[Gwei, DELEGATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
     delegated_validators: List[DelegatedValidator, VALIDATOR_REGISTRY_LIMIT]  # [New in EIPXXXX_eODS]
-    # Delegation requests buffers
+    # Delegation operations requests buffers
     pending_operator_activations: List[
         PendingActivateOperator, PENDING_DELEGATION_OPERATIONS_LIMIT]  # [New in EIPXXXX_eODS]
     pending_deposits_to_delegate: List[
