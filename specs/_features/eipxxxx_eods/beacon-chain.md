@@ -8,68 +8,68 @@
 - [Introduction](#introduction)
 - [Custom types](#custom-types)
 - [Preset](#preset)
-  - [Execution](#execution)
-  - [Gwei values](#gwei-values)
-  - [State list lengths](#state-list-lengths)
+    - [Execution](#execution)
+    - [Gwei values](#gwei-values)
+    - [State list lengths](#state-list-lengths)
 - [Constants](#constants)
-  - [Execution layer triggered requests](#execution-layer-triggered-requests)
-  - [Delegation Operations Request Types](#delegation-operations-request-types)
+    - [Execution layer triggered requests](#execution-layer-triggered-requests)
+    - [Delegation Operations Request Types](#delegation-operations-request-types)
 - [Configuration](#configuration)
-  - [Time parameters](#time-parameters)
+    - [Time parameters](#time-parameters)
 - [Containers](#containers)
-  - [New containers](#new-containers)
-    - [New `Delegator`](#new-delegator)
-    - [New `DelegatedValidator`](#new-delegatedvalidator)
-    - [New `DelegationOperationRequest`](#new-delegationoperationrequest)
-    - [New `PendingActivateOperator`](#new-pendingactivateoperator)
-    - [New `PendingDepositToDelegate`](#new-pendingdeposittodelegate)
-    - [New `PendingDelegateRequest`](#new-pendingdelegaterequest)
-    - [New `PendingUndelegateRequest`](#new-pendingundelegaterequest)
-    - [New `PendingRedelegateRequest`](#new-pendingredelegaterequest)
-    - [New `PendingWithdrawFromDelegatorRequest`](#new-pendingwithdrawfromdelegatorrequest)
-    - [New `UndelegationExit`](#new-undelegationexit)
-    - [New `WithdrawalFromDelegators`](#new-withdrawalfromdelegators)
-  - [Modified containers](#modified-containers)
-    - [Modified `ExecutionRequests`](#modified-executionrequests)
-    - [Modified `Validator`](#modified-validator)
-    - [Modified `BeaconState`](#modified-beaconstate)
-    - [Modified `ExecutionPayload`](#modified-executionpayload)
+    - [New containers](#new-containers)
+        - [New `Delegator`](#new-delegator)
+        - [New `DelegatedValidator`](#new-delegatedvalidator)
+        - [New `DelegationOperationRequest`](#new-delegationoperationrequest)
+        - [New `PendingActivateOperator`](#new-pendingactivateoperator)
+        - [New `PendingDepositToDelegate`](#new-pendingdeposittodelegate)
+        - [New `PendingDelegateRequest`](#new-pendingdelegaterequest)
+        - [New `PendingUndelegateRequest`](#new-pendingundelegaterequest)
+        - [New `PendingRedelegateRequest`](#new-pendingredelegaterequest)
+        - [New `PendingWithdrawFromDelegatorRequest`](#new-pendingwithdrawfromdelegatorrequest)
+        - [New `UndelegationExit`](#new-undelegationexit)
+        - [New `WithdrawalFromDelegators`](#new-withdrawalfromdelegators)
+    - [Modified containers](#modified-containers)
+        - [Modified `ExecutionRequests`](#modified-executionrequests)
+        - [Modified `Validator`](#modified-validator)
+        - [Modified `BeaconState`](#modified-beaconstate)
+        - [Modified `ExecutionPayload`](#modified-executionpayload)
 - [Beacon chain state transition function](#beacon-chain-state-transition-function)
-  - [Block processing](#block-processing)
-    - [New `get_expected_withdrawals_from_delegators`](#new-get_expected_withdrawals_from_delegators)
-    - [New `process_withdrawals_from_delegators`](#new-process_withdrawals_from_delegators)
-    - [New `process_delegation_operation_request`](#new-process_delegation_operation_request)
-    - [Modified `process_block`](#modified-process_block)
-      - [Modified `process_withdrawals`](#modified-process_withdrawals)
-    - [Execution payload](#execution-payload)
-      - [Modify `get_execution_requests_list`](#modify-get_execution_requests_list)
+    - [Block processing](#block-processing)
+        - [New `get_expected_withdrawals_from_delegators`](#new-get_expected_withdrawals_from_delegators)
+        - [New `process_withdrawals_from_delegators`](#new-process_withdrawals_from_delegators)
+        - [New `process_delegation_operation_request`](#new-process_delegation_operation_request)
+        - [Modified `process_block`](#modified-process_block)
+            - [Modified `process_withdrawals`](#modified-process_withdrawals)
+        - [Execution payload](#execution-payload)
+            - [Modify `get_execution_requests_list`](#modify-get_execution_requests_list)
 - [Helper functions](#helper-functions)
-  - [Delegation helper functions](#delegation-helper-functions)
-    - [New `register_new_delegator`](#new-register_new_delegator)
-    - [New `get_delegated_validator`](#new-get_delegated_validator)
-  - [Beacon state mutators](#beacon-state-mutators)
-    - [New `initiate_delegated_balances_exit`](#new-initiate_delegated_balances_exit)
-    - [Modified `slash_validator`](#modified-slash_validator)
-    - [Modified `initiate_validator_exit`](#modified-initiate_validator_exit)
-  - [Epoch processing](#epoch-processing)
-    - [New `process_pending_deposits_to_delegate`](#new-process_pending_deposits_to_delegate)
-    - [New `process_pending_activate_operators`](#new-process_pending_activate_operators)
-    - [New `process_pending_delegations`](#new-process_pending_delegations)
-    - [New `process_pending_undelegations`](#new-process_pending_undelegations)
-    - [New `process_pending_redelegations`](#new-process_pending_redelegations)
-    - [New `process_undelegations_exit_queue`](#new-process_undelegations_exit_queue)
-    - [Modified process_rewards_and_penalties](#modified-process_rewards_and_penalties)
-    - [Modified `process_slashings`](#modified-process_slashings)
-    - [Modified `process_effective_balance_updates`](#modified-process_effective_balance_updates)
-    - [New `is_validator_delegable`](#new-is_validator_delegable)
-    - [Modified `process_epoch`](#modified-process_epoch)
-    - [Modified `apply_pending_deposit`](#modified-apply_pending_deposit)
-    - [Modified `process_pending_consolidations`](#modified-process_pending_consolidations)
-    - [Modified `process_registry_updates`](#modified-process_registry_updates)
-    - [Operations](#operations)
-      - [Modified `process_operations`](#modified-process_operations)
-      - [Deposits](#deposits)
-        - [New `is_withdrawable_from_delegator`](#new-is_withdrawable_from_delegator)
+    - [Delegation helper functions](#delegation-helper-functions)
+        - [New `register_new_delegator`](#new-register_new_delegator)
+        - [New `get_delegated_validator`](#new-get_delegated_validator)
+    - [Beacon state mutators](#beacon-state-mutators)
+        - [New `initiate_delegated_balances_exit`](#new-initiate_delegated_balances_exit)
+        - [Modified `slash_validator`](#modified-slash_validator)
+        - [Modified `initiate_validator_exit`](#modified-initiate_validator_exit)
+    - [Epoch processing](#epoch-processing)
+        - [New `process_pending_deposits_to_delegate`](#new-process_pending_deposits_to_delegate)
+        - [New `process_pending_activate_operators`](#new-process_pending_activate_operators)
+        - [New `process_pending_delegations`](#new-process_pending_delegations)
+        - [New `process_pending_undelegations`](#new-process_pending_undelegations)
+        - [New `process_pending_redelegations`](#new-process_pending_redelegations)
+        - [New `process_undelegations_exit_queue`](#new-process_undelegations_exit_queue)
+        - [Modified process_rewards_and_penalties](#modified-process_rewards_and_penalties)
+        - [Modified `process_slashings`](#modified-process_slashings)
+        - [Modified `process_effective_balance_updates`](#modified-process_effective_balance_updates)
+        - [New `is_validator_delegable`](#new-is_validator_delegable)
+        - [Modified `process_epoch`](#modified-process_epoch)
+        - [Modified `apply_pending_deposit`](#modified-apply_pending_deposit)
+        - [Modified `process_pending_consolidations`](#modified-process_pending_consolidations)
+        - [Modified `process_registry_updates`](#modified-process_registry_updates)
+        - [Operations](#operations)
+            - [Modified `process_operations`](#modified-process_operations)
+            - [Deposits](#deposits)
+                - [New `is_withdrawable_from_delegator`](#new-is_withdrawable_from_delegator)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -163,6 +163,11 @@ class DelegatedValidator(Container):
     fee_quotient: uint64
 ```
 
+
+*Note: `execution_requests.delegation_operations` is a flat list of DelegationOperationRequest entries. Each entry
+includes a `type: Bytes1`  that discriminates the request subtype. All requests are SSZ-encoded using the same
+container structure and differentiated at processing time by their `.type` value.
+
 #### New `DelegationOperationRequest`
 
 ```python
@@ -170,8 +175,6 @@ class DelegationOperationRequest(Container):
     type: Bytes1
     source_pubkey: BLSPubkey
     target_pubkey: BLSPubkey
-    withdraw_credentials: Bytes32
-    signature: BLSSignature
     amount: Gwei
     execution_address: ExecutionAddress
 ```
@@ -728,44 +731,44 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         request_pubkey = pending_activation.validator_pubkey
         validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkeyy))
         validator = state.validators[validator_index]
-        
+
         if request_pubkey not in validator_pubkeys:
             break
 
         # Ensure the validator is not already an operator
         if validator.is_operator:
             break
-      
+
         # Verify request has validator ownership and proper withdrawal credentials
         has_correct_credential = has_compounding_withdrawal_credential(validator)
         is_correct_source_address = (
-              validator.withdrawal_credentials[12:] == pending_activation.execution_address
+                validator.withdrawal_credentials[12:] == pending_activation.execution_address
         )
         if not (has_correct_credential and is_correct_source_address):
             break
-          
+
         # Verify validator has minimum initial balance (the operator's bond) 
         if state.balances[validator_index] < MIN_OPERATOR_BALANCE:
-            break 
-        
-        # Verify exit has not been initiated
+            break
+
+            # Verify exit has not been initiated
         if validator.exit_epoch != FAR_FUTURE_EPOCH:
             break
-          
+
         # Ensure the validator is not slashed
         if validator.slashed:
             break
-        
+
         validator.is_operator = True
-        
-        delegated_validator =  DelegatedValidator(
-        validator = validator,
-        delegated_validator_quota = 1,
-        delegators_quotas = [],
-        delegated_balances = [],
-        total_delegated_balance = 0,
-        fee_quotient = pending_activation.fee_quotient
-        ) 
+
+        delegated_validator = DelegatedValidator(
+            validator=validator,
+            delegated_validator_quota=1,
+            delegators_quotas=[],
+            delegated_balances=[],
+            total_delegated_balance=0,
+            fee_quotient=pending_activation.fee_quotient
+        )
 
     state.delegated_validators.append(delegated_validator)
     state.pending_activate_operator = []
@@ -945,7 +948,7 @@ def process_undelegations_exit_queue(state: BeaconState) -> None:
                 undelegated_amount, total_amount_at_exit = undelegate_from_validator(state, undelegation_exit)
                 undelegation_exit.amount = undelegated_amount
                 undelegation_exit.total_amount_at_exit = total_amount_at_exit
-               
+
                 # we postpone it, so we can test it for withdrawability next epoch
                 postponed.append(undelegation_exit)
                 continue
