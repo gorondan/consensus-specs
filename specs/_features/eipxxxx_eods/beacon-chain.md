@@ -458,7 +458,7 @@ def process_withdrawals_from_delegators(state: BeaconState, payload: ExecutionPa
 def process_delegation_operation_request(state: BeaconState,
                                          delegation_operation_request: DelegationOperationRequest) -> None:
     if delegation_operation_request.type == ACTIVATE_OPERATOR_REQUEST_TYPE:
-        state.pending_activate_operator.append(PendingActivateOperator(
+        state.pending_operator_activations.append(PendingActivateOperator(
             validator_pubkey=delegation_operation_request.target_pubkey,
             execution_address=delegation_operation_request.execution_address,
             fee_quotient=delegation_operation_request.fee_quotient
@@ -723,7 +723,7 @@ def process_pending_deposits_to_delegate(state: BeaconState) -> None:
 
 ```python
 def process_pending_activate_operators(state: BeaconState) -> None:
-    for pending_activation in state.pending_activate_operator:
+    for pending_activation in state.pending_operator_activations:
         # check if validator with given pubkey exists 
         validator_pubkeys = [v.pubkey for v in state.validators]
         request_pubkey = pending_activation.validator_pubkey
@@ -769,7 +769,7 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         )
 
     state.delegated_validators.append(delegated_validator)
-    state.pending_activate_operator = []
+    state.pending_operator_activations = []
 ```
 
 #### New `process_pending_delegations`
