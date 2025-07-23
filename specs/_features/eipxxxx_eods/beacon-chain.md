@@ -57,7 +57,7 @@
     - [New `process_pending_delegations`](#new-process_pending_delegations)
     - [New `process_pending_undelegations`](#new-process_pending_undelegations)
     - [New `process_pending_redelegations`](#new-process_pending_redelegations)
-    - [New `process_undelegations_exit_queue`](#new-process_undelegations_exit_queue)
+    - [New `process_delegation_exit_queue`](#new-process_delegation_exit_queue)
     - [Modified process_rewards_and_penalties](#modified-process_rewards_and_penalties)
     - [Modified `process_slashings`](#modified-process_slashings)
     - [Modified `process_effective_balance_updates`](#modified-process_effective_balance_updates)
