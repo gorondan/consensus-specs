@@ -895,7 +895,7 @@ def process_pending_redelegations(state: BeaconState) -> None:
         source_delegated_validator = get_delegated_validator(state, redelegate.source_pubkey)
         if not source_delegated_validator:
             break
-
+        # check if delegator exists
         delegator_index = delegators_execution_addresses.index(redelegate.execution_address)
         if not delegator_index:
             break
@@ -906,12 +906,12 @@ def process_pending_redelegations(state: BeaconState) -> None:
         if source_delegated_validator.delegators_quotas[delegator_index] == 0:
             break
 
-        # we cap the requested amount to avoid a malicious request which can fill up the churn    
+        # we cap the requested amount to avoid spam requests which can fill up the churn    
         requested_to_redelegate = redelegate.amount
         if source_delegated_validator.delegated_balances[delegator_index] < requested_to_redelegate:
             requested_to_redelegate = source_delegated_validator.delegated_balances[delegator_index]
 
-            # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
+        # Calculates the redelegation's exit and withdrawability epochs before balance re-allocation to target validator
         exit_epoch = compute_exit_epoch_and_update_churn(state, redelegate.amount)
         withdrawable_epoch = Epoch(exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 
@@ -930,49 +930,49 @@ def process_pending_redelegations(state: BeaconState) -> None:
     state.pending_redelegations = []
 ```
 
-#### New `process_undelegations_exit_queue`
+#### New `process_delegation_exit_queue`
 
 ```python
-def process_undelegations_exit_queue(state: BeaconState) -> None:
+def process_delegation_exit_queue(state: BeaconState) -> None:
     current_epoch = get_current_epoch(state)
     postponed = []
 
-    for undelegation_exit in state.delegation_exit_queue:
-        if undelegation_exit.exit_epoch != FAR_FUTURE_EPOCH:
+    for delegation_exit in state.delegation_exit_queue:
+        if delegation_exit.exit_epoch != FAR_FUTURE_EPOCH:
             # the amount is undelegated
-            if current_epoch >= undelegation_exit.exit_epoch:
+            if current_epoch >= delegation_exit.exit_epoch:
                 # time to undelegate
-                undelegation_exit.exit_epoch = FAR_FUTURE_EPOCH
-                undelegated_amount, total_amount_at_exit = undelegate_from_validator(state, undelegation_exit)
-                undelegation_exit.amount = undelegated_amount
-                undelegation_exit.total_amount_at_exit = total_amount_at_exit
+                delegation_exit.exit_epoch = FAR_FUTURE_EPOCH
+                undelegated_amount, total_amount_at_exit = undelegate_from_validator(state, delegation_exit)
+                delegation_exit.amount = undelegated_amount
+                delegation_exit.total_amount_at_exit = total_amount_at_exit
 
                 # we postpone it, so we can test it for withdrawability next epoch
-                postponed.append(undelegation_exit)
+                postponed.append(delegation_exit)
                 continue
             else:
                 # not undelegated, we postpone the check for next epoch
-                postponed.append(undelegation_exit)
+                postponed.append(delegation_exit)
                 continue
 
         else:
             # the amount has been undelegated, we now check for withdrawability
-            if current_epoch >= undelegation_exit.withdrawable_epoch:
+            if current_epoch >= delegation_exit.withdrawable_epoch:
                 # beacon-chain-accounting is called to settle undelegation
-                delegator_amount = settle_undelegation(state, undelegation_exit)
+                delegator_amount = settle_undelegation(state, delegation_exit)
 
-                if undelegation_exit.is_redelegation:
+                if delegation_exit.is_redelegation:
                     # Appends the redelegation in the delegations activation queue
                     state.pending_delegations.append(PendingDelegateRequest(
-                        validator_pubkey=undelegation_exit.redelegate_to_validator_pubkey,
-                        execution_address=undelegation_exit.execution_address,
+                        validator_pubkey=delegation_exit.redelegate_to_validator_pubkey,
+                        execution_address=delegation_exit.execution_address,
                         amount=delegator_amount,
                         slot=state.slot
                     ))
 
             else:
                 # we can not withdraw, we postpone
-                postponed.append(undelegation_exit)
+                postponed.append(delegation_exit)
 
     state.delegation_exit_queue = postponed
 ```
@@ -1091,7 +1091,7 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_delegations(state)  # [New in EIPXXXX_eODS]
     process_pending_undelegations(state)  # [New in EIPXXXX_eODS]
     process_pending_redelegations(state)  # [New in EIPXXXX_eODS]
-    process_undelegations_exit_queue(state)  # [New in EIPXXXX_eODS]
+    process_delegation_exit_queue(state)  # [New in EIPXXXX_eODS]
     process_effective_balance_updates(state)  # [Modified in Electra:EIP7251]
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
