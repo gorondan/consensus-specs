@@ -667,12 +667,12 @@ def slash_validator(
     whistleblower = state.validators[whistleblower_index]
 
     if proposer.is_operator:
-        reward_delegated_validator_and_exit_queue(state, proposer_index, proposer.pubkey, proposer_reward)
+        reward_delegated_validator(state, proposer_index, proposer.pubkey, proposer_reward)
     else:
         increase_balance(state, proposer_index, proposer_reward)
 
     if whistleblower.is_operator:
-        reward_delegated_validator_and_exit_queue(state, whistleblower_index, whistleblower.pubkey,
+        reward_delegated_validator(state, whistleblower_index, whistleblower.pubkey,
                                                   Gwei(whistleblower_reward - proposer_reward))
     else:
         increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
@@ -727,7 +727,7 @@ def process_pending_activate_operators(state: BeaconState) -> None:
         # check if validator with given pubkey exists 
         validator_pubkeys = [v.pubkey for v in state.validators]
         request_pubkey = pending_activation.validator_pubkey
-        validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkeyy))
+        validator_index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
         validator = state.validators[validator_index]
 
         if request_pubkey not in validator_pubkeys:
@@ -993,8 +993,8 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
         for index in range(len(state.validators)):
             validator = state.validators[index]
             if validator.is_operator:
-                reward_delegated_validator_and_exit_queue(state, index, validator.pubkey, rewards[index])
-                penalize_delegated_validator_and_exit_queue(state, index, validator.pubkey, penalties[index])
+                reward_delegated_validator(state, index, validator.pubkey, rewards[index])
+                penalize_delegated_validator(state, index, validator.pubkey, penalties[index])
             else:
                 increase_balance(state, ValidatorIndex(index), rewards[index])
                 decrease_balance(state, ValidatorIndex(index), penalties[index])
