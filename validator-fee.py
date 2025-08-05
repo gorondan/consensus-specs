@@ -86,7 +86,7 @@ class DelegatedValidator:
         self.apply_delegations_penalties(delegators_penalty)
 
     def apply_delegations_rewards(self, amount: float) -> None:
-        self.total_delegated_balance += amount
+        self.total_delegated_balance += amount * (1- self.delegated_validator_quota) # Rewards are compounded in total delegated balance based on delegators total quota
 
         for index in range(len(self.delegators_quotas)):
             self.delegated_balances[index] += amount * self.delegators_quotas[index]
