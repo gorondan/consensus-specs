@@ -68,13 +68,12 @@ class DelegatedValidator:
 
     def reward_delegated_validator(self, reward: float) -> None:
         validator_reward = self.delegated_validator_quota * reward
-        delegators_reward = reward - validator_reward
 
         # reward the operator
         self.validator_balance += validator_reward
 
         # reward the delegations
-        self.apply_delegations_rewards(delegators_reward)
+        self.apply_delegations_rewards(reward) # TO DO : update in specs the calculation of delegators reward as a quotas of the TOTAL reward
 
     def penalize_delegated_validator(self, penalty: float) -> None:
         validator_penalty = self.delegated_validator_quota * penalty
