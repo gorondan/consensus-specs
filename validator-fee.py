@@ -9,7 +9,7 @@ class DelegatedValidator:
     delegators_quotas: List[float]
     delegated_balances: List[float]
     dry_delegated_balances: List[float]  # [dev] the amounts delegated over time, without any Rewards/Penalties
-    rewards_penalties_deltas: List[float]
+    validators_fees: List[float]
     total_delegated_balance: float
     fee_quotient: float
 
@@ -23,7 +23,7 @@ class DelegatedValidator:
 
         self.dry_delegated_balances = [0, 0, 0]
 
-        self.rewards_penalties_deltas = [0, 0, 0]
+        self.validators_fees = [0, 0, 0]
         self.total_delegated_balance = 0
         self.fee_quotient = 0.1
 
@@ -31,7 +31,7 @@ class DelegatedValidator:
 
     def setup_initial_values(self) -> None:
         self.delegators_balances = [100, 100, 100]
-        self.validator_balance = 50
+        self.validator_balance = 32
         self.delegated_validator_quota = 1
 
     def recalculate_delegator_quotas(self) -> None:
@@ -77,29 +77,26 @@ class DelegatedValidator:
 
     def penalize_delegated_validator(self, penalty: float) -> None:
         validator_penalty = self.delegated_validator_quota * penalty
-        delegators_penalty = penalty - validator_penalty
 
         # penalize the operator
         self.validator_balance -= validator_penalty
 
         # penalize the delegations
-        self.apply_delegations_penalties(delegators_penalty)
+        self.apply_delegations_penalties(penalty) # TO DO : update in specs the calculation of delegators penalties as a quotas of the TOTAL penalty
 
     def apply_delegations_rewards(self, amount: float) -> None:
         self.total_delegated_balance += amount * (1- self.delegated_validator_quota) # Rewards are compounded in total delegated balance based on delegators total quota
 
         for index in range(len(self.delegators_quotas)):
             self.delegated_balances[index] += amount * self.delegators_quotas[index]
-            self.rewards_penalties_deltas[index] += amount * self.delegators_quotas[
-                index]  # this was added for the patch
+            self.validators_fees[index] += amount * self.delegators_quotas[index] * self.fee_quotient  # this was added for the patch
 
     def apply_delegations_penalties(self, amount: float) -> None:
-        self.total_delegated_balance -= amount
+        self.total_delegated_balance -= amount * (1- self.delegated_validator_quota) # Penalties are compounded in total delegated balance based on delegators total quota
 
         for index in range(len(self.delegators_quotas)):
             self.delegated_balances[index] -= amount * self.delegators_quotas[index]
-            self.rewards_penalties_deltas[index] -= amount * self.delegators_quotas[
-                index]  # this was added for the patch
+            self.validators_fees[index] -= amount * self.delegators_quotas[index] * self.fee_quotient  # this was added for the patch
 
     # this assumes an empty exit queue
     def slash_pre(self, amount: float):
@@ -115,6 +112,7 @@ class DelegatedValidator:
             self.delegated_balances[index] -= delegators_penalty * self.delegators_quotas[index]
 
     def slash_post(self, amount: float):
+
         validator_penalty = self.delegated_validator_quota * amount
         delegators_penalty = amount - validator_penalty
 
@@ -124,12 +122,7 @@ class DelegatedValidator:
 
         # slash the delegated balances
         for index in range(len(self.delegated_balances)):
-            self.delegated_balances[index] -= delegators_penalty * self.delegators_quotas[index]
-
-        # slash_amount / effective_balance
-        r_p_slash_ratio = amount / (self.validator_balance + self.total_delegated_balance)
-        for index in range(len(self.rewards_penalties_deltas)):
-            self.rewards_penalties_deltas[index] -= self.rewards_penalties_deltas[index] * r_p_slash_ratio
+            self.delegated_balances[index] -= amount * self.delegators_quotas[index] # TO DO : update in specs the calculation of delegated balances as a quotas of the TOTAL slashing penalty
 
     # this is a naive implementation of the withdrawal, before this patch
     def withdraw_pre(self, delegator_index: float, amount: float):
@@ -145,22 +138,20 @@ class DelegatedValidator:
         self.recalculate_delegator_quotas()
 
     def withdraw_post(self, delegator_index: float, amount: float):
+        withdraw_from_validator_fee_ratio = amount / self.delegated_balances[delegator_index]
         self.delegated_balances[delegator_index] -= amount
         self.total_delegated_balance -= amount
 
-        withdraw_from_rewards_ratio = amount / self.delegators_balances[delegator_index]
-        withdraw_from_rewards = self.rewards_penalties_deltas[delegator_index] * withdraw_from_rewards_ratio
-        self.rewards_penalties_deltas[delegator_index] -= withdraw_from_rewards
+        withdraw_from_validator_fee = self.validators_fees[delegator_index] * withdraw_from_validator_fee_ratio
+        self.validators_fees[delegator_index] -= withdraw_from_validator_fee
 
-
-        validator_fee = withdraw_from_rewards * self.fee_quotient
-        delegator_amount = amount - validator_fee
+        validator_fee = withdraw_from_validator_fee
+        delegator_amount = validator_fee * 9
 
         self.delegators_balances[delegator_index] += delegator_amount
         self.validator_balance += validator_fee
 
         self.recalculate_delegator_quotas()
-
 
 
 class Simulator:
@@ -200,7 +191,7 @@ class Simulator:
 dv = DelegatedValidator()
 simulator = Simulator(dv)
 
-simulator.queue_action(["Delegator 0 delegates 12", dv.delegate_to_validator, 0, 12])
+simulator.queue_action(["Delegator 0 delegates 12", dv.delegate_to_validator, 0, 64])
 simulator.queue_action(["Apply 5 reward", dv.reward_delegated_validator, 5])
 simulator.queue_action(["Apply 3 reward", dv.reward_delegated_validator, 3])
 simulator.queue_action(["Apply 4 reward", dv.reward_delegated_validator, 4])
