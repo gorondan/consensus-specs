@@ -136,7 +136,9 @@ class DelegatedValidator:
         self.validator_balance += validator_fee
 
         self.recalculate_delegator_quotas()
-
+'''
+This is equivalent to an undelegation
+'''
     def withdraw_post(self, delegator_index: float, amount: float):
         withdraw_from_validator_fee_ratio = amount / self.delegated_balances[delegator_index]
         self.delegated_balances[delegator_index] -= amount
@@ -187,16 +189,21 @@ class Simulator:
             print('\n'.join("%s: %s" % item for item in attrs.items()))
             print('\n')
 
-
+'''
+Validator fee is what the Delegator owes to the Validator Operator in terms of staking rewards fees. 
+It's deducted from the amount debited to the Delegator's non-delegated balance (the undelegated amount), during undelegation. 
+It's constituted as a quotient out of the compounded rewards and penalties the validator has generated with the delegated stake of that particular delegator. 
+Does not apply if compounded value (validators_fees[index]) is negative, nor does it apply to slashing.   
+'''
 dv = DelegatedValidator()
 simulator = Simulator(dv)
 
-simulator.queue_action(["Delegator 0 delegates 12", dv.delegate_to_validator, 0, 64])
-simulator.queue_action(["Apply 5 reward", dv.reward_delegated_validator, 5])
-simulator.queue_action(["Apply 3 reward", dv.reward_delegated_validator, 3])
-simulator.queue_action(["Apply 4 reward", dv.reward_delegated_validator, 4])
-simulator.queue_action(["Apply 4 penalty", dv.penalize_delegated_validator, 4])
+simulator.queue_action(["Delegator 0 delegates 64", dv.delegate_to_validator, 0, 64])
+simulator.queue_action(["Apply 0.5 reward", dv.reward_delegated_validator, 0.5])
+simulator.queue_action(["Apply 0.3 reward", dv.reward_delegated_validator, 0.3])
+simulator.queue_action(["Apply 0.1 reward", dv.reward_delegated_validator, 0.1])
+simulator.queue_action(["Apply 0.1 penalty", dv.penalize_delegated_validator, 0.1])
 # simulator.queue_action(["Apply 3 slashing/pre", dv.slash_pre, 3])
-simulator.queue_action(["Apply 3 slashing/post", dv.slash_post, 3])
+simulator.queue_action(["Apply 16 slashing/post", dv.slash_post, 16])
 simulator.queue_action(["Perform withdraw/post for delegator index 0, amount 8", dv.withdraw_post, 0, 8])
 simulator.simulate()
