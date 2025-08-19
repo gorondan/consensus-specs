@@ -136,9 +136,9 @@ class DelegatedValidator:
         self.validator_balance += validator_fee
 
         self.recalculate_delegator_quotas()
-'''
-This is equivalent to an undelegation
-'''
+    '''
+    This is equivalent to an undelegation
+    '''
     def withdraw_post(self, delegator_index: float, amount: float):
         withdraw_from_validator_fee_ratio = amount / self.delegated_balances[delegator_index]
         self.delegated_balances[delegator_index] -= amount
@@ -148,10 +148,9 @@ This is equivalent to an undelegation
         self.validators_fees[delegator_index] -= withdraw_from_validator_fee
 
         validator_fee = withdraw_from_validator_fee
-        delegator_amount = validator_fee * 9
 
-        self.delegators_balances[delegator_index] += delegator_amount
         self.validator_balance += validator_fee
+        self.delegators_balances[delegator_index] += amount - validator_fee
 
         self.recalculate_delegator_quotas()
 
